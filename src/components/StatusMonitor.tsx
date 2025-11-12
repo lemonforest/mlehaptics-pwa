@@ -28,7 +28,6 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
   // Initialize with default values
   const [initialSessionTime, setInitialSessionTime] = useState(0);
   const [initialBatteryLevel, setInitialBatteryLevel] = useState(100);
-  const [isInitialized, setIsInitialized] = useState(false);
 
   // Sync function for session timer
   const syncSessionTime = useCallback(async () => {
@@ -48,14 +47,14 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
     duration: sessionDuration,
     onSync: syncSessionTime,
     syncInterval: 30000, // Sync every 30 seconds
-    autoStart: connected && isInitialized,
+    autoStart: false, // Will start manually after loading config
   });
 
   const battery = useBatteryLevel({
     initialLevel: initialBatteryLevel,
     onRead: readBatteryLevel,
     pollInterval: 30000, // Poll every 30 seconds
-    autoStart: connected && isInitialized,
+    autoStart: false, // Will start manually after loading config
   });
 
   // Load initial config when connected
@@ -63,7 +62,8 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
     if (connected) {
       loadInitialConfig();
     } else {
-      setIsInitialized(false);
+      // Stop timers when disconnected
+      sessionTimer.stop();
     }
   }, [connected]);
 
@@ -88,7 +88,8 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
       sessionTimer.setTime(config.sessionTime);
       battery.setBatteryLevel(config.batteryLevel);
 
-      setIsInitialized(true);
+      // Start the timers now that we have initial values
+      sessionTimer.start();
 
       console.log('✅ Optimized polling mode active:');
       console.log('  - Session time: local counter with 30s device sync');

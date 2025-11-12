@@ -1,11 +1,14 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { readFileSync } from 'fs';
+
+const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
 
 export default defineConfig({
   base: '/mlehaptics-pwa/', // GitHub Pages base path
   define: {
-    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '1.1.0'),
+    __APP_VERSION__: JSON.stringify(packageJson.version),
     __BUILD_DATE__: JSON.stringify(new Date().toISOString()),
   },
   plugins: [
