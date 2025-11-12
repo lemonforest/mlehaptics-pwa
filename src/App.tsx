@@ -118,20 +118,28 @@ function App() {
             </Typography>
             <Typography variant="caption" sx={{ opacity: 0.8 }}>
               v{__APP_VERSION__} • {formatBuildDate(__BUILD_DATE__)}
+              {connected && (
+                <>
+                  {' • '}
+                  <Box
+                    component="span"
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                    }}
+                  >
+                    <BluetoothConnectedIcon sx={{ fontSize: '0.875rem' }} />
+                    {deviceName}
+                  </Box>
+                </>
+              )}
             </Typography>
           </Box>
           {connected && (
-            <>
-              <Chip
-                icon={<BluetoothConnectedIcon />}
-                label={deviceName}
-                color="success"
-                sx={{ mr: 2 }}
-              />
-              <IconButton color="inherit" onClick={handleRefresh}>
-                <RefreshIcon />
-              </IconButton>
-            </>
+            <IconButton color="inherit" onClick={handleRefresh}>
+              <RefreshIcon />
+            </IconButton>
           )}
           {!connected && (
             <IconButton color="inherit" onClick={handleAdvancedScan} disabled={!bluetoothAvailable}>
