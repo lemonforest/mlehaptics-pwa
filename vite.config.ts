@@ -55,7 +55,8 @@ export default defineConfig({
     })
   ],
   server: {
-    https: true, // Web Bluetooth requires HTTPS
+    // Use HTTP for local development (requires chrome://flags workaround for Web Bluetooth)
+    // Production deployments will use HTTPS automatically
     host: true
   }
 });
