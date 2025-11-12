@@ -2,6 +2,12 @@
 
 Progressive Web App for configuring MLEHaptics BLE devices for EMDR therapy.
 
+## 🚀 Live App
+
+**Try it now:** [https://lemonforest.github.io/mlehaptics-pwa/](https://lemonforest.github.io/mlehaptics-pwa/)
+
+Works on Chrome, Edge, or Opera (Android/Desktop). No installation required - just visit the URL and connect your device!
+
 ## Features
 
 ### BLE Configuration Service (AD032 Compliant)
