@@ -120,22 +120,25 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
             <Typography gutterBottom>
               Session Duration: {formatTime(sessionDuration)} ({sessionDuration / 60} minutes)
             </Typography>
-            <Slider
-              value={sessionDuration}
-              onChange={handleDurationChange}
-              min={1200}
-              max={5400}
-              step={60}
-              marks={[
-                { value: 1200, label: '20 min' },
-                { value: 2700, label: '45 min' },
-                { value: 3600, label: '60 min' },
-                { value: 5400, label: '90 min' },
-              ]}
-              disabled={!connected}
-              valueLabelDisplay="auto"
-              valueLabelFormat={(value) => `${value / 60} min`}
-            />
+            <Box sx={{ px: 2, py: 3 }}>
+              <Slider
+                value={sessionDuration}
+                onChange={handleDurationChange}
+                min={1200}
+                max={5400}
+                step={60}
+                marks={[
+                  { value: 1200, label: '20 min' },
+                  { value: 2700, label: '45 min' },
+                  { value: 3600, label: '60 min' },
+                  { value: 5400, label: '90 min' },
+                ]}
+                disabled={!connected}
+                valueLabelDisplay="auto"
+                valueLabelFormat={(value) => `${value / 60} min`}
+                sx={{ touchAction: 'none' }}
+              />
+            </Box>
             <Typography variant="caption" color="text.secondary">
               Target session length (20-90 minutes)
             </Typography>

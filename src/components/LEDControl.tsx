@@ -165,7 +165,7 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected }) => {
           {colorMode === 0 ? (
             <Grid item xs={12}>
               <Typography gutterBottom>Palette Colors</Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, py: 2 }}>
                 {COLOR_PALETTE.map((color, index) => (
                   <Button
                     key={index}
@@ -192,38 +192,44 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected }) => {
             <>
               <Grid item xs={12}>
                 <Typography gutterBottom>Red: {customRGB[0]}</Typography>
-                <Slider
-                  value={customRGB[0]}
-                  onChange={(_, value) => handleRGBChange('r', value as number)}
-                  min={0}
-                  max={255}
-                  disabled={!connected || !ledEnable}
-                  sx={{ color: '#f44336' }}
-                />
+                <Box sx={{ px: 2, py: 3 }}>
+                  <Slider
+                    value={customRGB[0]}
+                    onChange={(_, value) => handleRGBChange('r', value as number)}
+                    min={0}
+                    max={255}
+                    disabled={!connected || !ledEnable}
+                    sx={{ color: '#f44336', touchAction: 'none' }}
+                  />
+                </Box>
               </Grid>
 
               <Grid item xs={12}>
                 <Typography gutterBottom>Green: {customRGB[1]}</Typography>
-                <Slider
-                  value={customRGB[1]}
-                  onChange={(_, value) => handleRGBChange('g', value as number)}
-                  min={0}
-                  max={255}
-                  disabled={!connected || !ledEnable}
-                  sx={{ color: '#4caf50' }}
-                />
+                <Box sx={{ px: 2, py: 3 }}>
+                  <Slider
+                    value={customRGB[1]}
+                    onChange={(_, value) => handleRGBChange('g', value as number)}
+                    min={0}
+                    max={255}
+                    disabled={!connected || !ledEnable}
+                    sx={{ color: '#4caf50', touchAction: 'none' }}
+                  />
+                </Box>
               </Grid>
 
               <Grid item xs={12}>
                 <Typography gutterBottom>Blue: {customRGB[2]}</Typography>
-                <Slider
-                  value={customRGB[2]}
-                  onChange={(_, value) => handleRGBChange('b', value as number)}
-                  min={0}
-                  max={255}
-                  disabled={!connected || !ledEnable}
-                  sx={{ color: '#2196f3' }}
-                />
+                <Box sx={{ px: 2, py: 3 }}>
+                  <Slider
+                    value={customRGB[2]}
+                    onChange={(_, value) => handleRGBChange('b', value as number)}
+                    min={0}
+                    max={255}
+                    disabled={!connected || !ledEnable}
+                    sx={{ color: '#2196f3', touchAction: 'none' }}
+                  />
+                </Box>
               </Grid>
             </>
           )}
@@ -252,21 +258,24 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected }) => {
             <Typography gutterBottom>
               Brightness: {brightness}%
             </Typography>
-            <Slider
-              value={brightness}
-              onChange={handleBrightnessChange}
-              min={10}
-              max={30}
-              step={1}
-              marks={[
-                { value: 10, label: '10%' },
-                { value: 20, label: '20%' },
-                { value: 30, label: '30%' },
-              ]}
-              disabled={!connected || !ledEnable}
-              valueLabelDisplay="auto"
-              valueLabelFormat={(value) => `${value}%`}
-            />
+            <Box sx={{ px: 2, py: 3 }}>
+              <Slider
+                value={brightness}
+                onChange={handleBrightnessChange}
+                min={10}
+                max={30}
+                step={1}
+                marks={[
+                  { value: 10, label: '10%' },
+                  { value: 20, label: '20%' },
+                  { value: 30, label: '30%' },
+                ]}
+                disabled={!connected || !ledEnable}
+                valueLabelDisplay="auto"
+                valueLabelFormat={(value) => `${value}%`}
+                sx={{ touchAction: 'none' }}
+              />
+            </Box>
             <Typography variant="caption" color="text.secondary">
               User comfort range (eye strain prevention)
             </Typography>

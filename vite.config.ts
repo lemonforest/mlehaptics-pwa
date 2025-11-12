@@ -4,6 +4,10 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   base: '/mlehaptics-pwa/', // GitHub Pages base path
+  define: {
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '1.1.0'),
+    __BUILD_DATE__: JSON.stringify(new Date().toISOString()),
+  },
   plugins: [
     react(),
     VitePWA({
