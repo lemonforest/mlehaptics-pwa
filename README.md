@@ -246,7 +246,9 @@ mlehaptics-pwa/
 
 ### "Connection failed"
 - Ensure device is powered on and within range
+- **Disconnect from other apps first** - Only one BLE connection at a time (close nRF Connect, etc.)
 - Check that device is advertising the Configuration Service
+- Try advanced scan with "Show All Devices" to verify device is visible
 - Try refreshing the page and reconnecting
 - Check browser console for detailed error messages
 
