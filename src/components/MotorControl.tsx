@@ -9,6 +9,7 @@ import {
   MenuItem,
   Slider,
   Grid,
+  Box,
 } from '@mui/material';
 import { MotorMode, MOTOR_MODE_LABELS, bleConfigService } from '../services/ble-config.service';
 
@@ -129,42 +130,48 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected }) => {
                 <Typography gutterBottom>
                   Custom Frequency: {(customFrequency / 100).toFixed(2)} Hz
                 </Typography>
-                <Slider
-                  value={customFrequency}
-                  onChange={handleFrequencyChange}
-                  min={25}
-                  max={200}
-                  step={1}
-                  marks={[
-                    { value: 25, label: '0.25 Hz' },
-                    { value: 100, label: '1.0 Hz' },
-                    { value: 200, label: '2.0 Hz' },
-                  ]}
-                  disabled={!connected}
-                  valueLabelDisplay="auto"
-                  valueLabelFormat={(value) => `${(value / 100).toFixed(2)} Hz`}
-                />
+                <Box sx={{ px: 2, py: 3 }}>
+                  <Slider
+                    value={customFrequency}
+                    onChange={handleFrequencyChange}
+                    min={25}
+                    max={200}
+                    step={1}
+                    marks={[
+                      { value: 25, label: '0.25 Hz' },
+                      { value: 100, label: '1.0 Hz' },
+                      { value: 200, label: '2.0 Hz' },
+                    ]}
+                    disabled={!connected}
+                    valueLabelDisplay="auto"
+                    valueLabelFormat={(value) => `${(value / 100).toFixed(2)} Hz`}
+                    sx={{ touchAction: 'none' }}
+                  />
+                </Box>
               </Grid>
 
               <Grid item xs={12}>
                 <Typography gutterBottom>
                   Custom Duty Cycle: {customDutyCycle}%
                 </Typography>
-                <Slider
-                  value={customDutyCycle}
-                  onChange={handleDutyCycleChange}
-                  min={10}
-                  max={90}
-                  step={1}
-                  marks={[
-                    { value: 10, label: '10%' },
-                    { value: 50, label: '50%' },
-                    { value: 90, label: '90%' },
-                  ]}
-                  disabled={!connected}
-                  valueLabelDisplay="auto"
-                  valueLabelFormat={(value) => `${value}%`}
-                />
+                <Box sx={{ px: 2, py: 3 }}>
+                  <Slider
+                    value={customDutyCycle}
+                    onChange={handleDutyCycleChange}
+                    min={10}
+                    max={90}
+                    step={1}
+                    marks={[
+                      { value: 10, label: '10%' },
+                      { value: 50, label: '50%' },
+                      { value: 90, label: '90%' },
+                    ]}
+                    disabled={!connected}
+                    valueLabelDisplay="auto"
+                    valueLabelFormat={(value) => `${value}%`}
+                    sx={{ touchAction: 'none' }}
+                  />
+                </Box>
               </Grid>
             </>
           )}
@@ -173,21 +180,24 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected }) => {
             <Typography gutterBottom>
               PWM Intensity: {pwmIntensity}%
             </Typography>
-            <Slider
-              value={pwmIntensity}
-              onChange={handlePWMIntensityChange}
-              min={30}
-              max={80}
-              step={1}
-              marks={[
-                { value: 30, label: '30%' },
-                { value: 55, label: '55%' },
-                { value: 80, label: '80%' },
-              ]}
-              disabled={!connected}
-              valueLabelDisplay="auto"
-              valueLabelFormat={(value) => `${value}%`}
-            />
+            <Box sx={{ px: 2, py: 3 }}>
+              <Slider
+                value={pwmIntensity}
+                onChange={handlePWMIntensityChange}
+                min={30}
+                max={80}
+                step={1}
+                marks={[
+                  { value: 30, label: '30%' },
+                  { value: 55, label: '55%' },
+                  { value: 80, label: '80%' },
+                ]}
+                disabled={!connected}
+                valueLabelDisplay="auto"
+                valueLabelFormat={(value) => `${value}%`}
+                sx={{ touchAction: 'none' }}
+              />
+            </Box>
             <Typography variant="caption" color="text.secondary">
               Motor power safety limits (30-80%)
             </Typography>

@@ -40,6 +40,12 @@ function App() {
   const [namePrefix, setNamePrefix] = useState<string>('');
   const [acceptAllDevices, setAcceptAllDevices] = useState(false);
 
+  // Format build date for display
+  const formatBuildDate = (isoDate: string) => {
+    const date = new Date(isoDate);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
   useEffect(() => {
     // Check if Web Bluetooth is available
     if (!navigator.bluetooth) {
@@ -105,9 +111,14 @@ function App() {
       <AppBar position="static">
         <Toolbar>
           <BluetoothIcon sx={{ mr: 2 }} />
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            MLEHaptics Configuration
-          </Typography>
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography variant="h6" component="div">
+              MLEHaptics Configuration
+            </Typography>
+            <Typography variant="caption" sx={{ opacity: 0.8 }}>
+              v{__APP_VERSION__} • {formatBuildDate(__BUILD_DATE__)}
+            </Typography>
+          </Box>
           {connected && (
             <>
               <Chip
@@ -208,9 +219,18 @@ function App() {
         </DialogActions>
       </Dialog>
 
-      <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
+      <Container
+        maxWidth="md"
+        sx={{
+          mt: 2,
+          mb: 4,
+          px: { xs: 2, sm: 3 },
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
         {!bluetoothAvailable && (
-          <Alert severity="error" sx={{ mb: 3 }}>
+          <Alert severity="error" sx={{ mb: 2 }}>
             <Typography variant="body1" gutterBottom>
               <strong>Web Bluetooth Not Supported</strong>
             </Typography>
@@ -229,13 +249,13 @@ function App() {
         )}
 
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
             {error}
           </Alert>
         )}
 
         {!connected && bluetoothAvailable && (
-          <Alert severity="info" sx={{ mb: 3 }}>
+          <Alert severity="info" sx={{ mb: 2 }}>
             <Typography variant="body1" gutterBottom>
               <strong>Welcome to MLEHaptics Configuration</strong>
             </Typography>
@@ -246,14 +266,14 @@ function App() {
           </Alert>
         )}
 
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <MotorControl connected={connected} />
           <LEDControl connected={connected} />
           <StatusMonitor connected={connected} />
         </Box>
 
         {connected && (
-          <Box sx={{ mt: 4, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
+          <Box sx={{ mt: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
             <Typography variant="caption" color="text.secondary">
               All settings are automatically saved to the device when changed.
               Settings persist across power cycles via NVS storage.
