@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -8,7 +8,6 @@ import {
   Select,
   MenuItem,
   Slider,
-  Box,
   Grid,
 } from '@mui/material';
 import { MotorMode, MOTOR_MODE_LABELS, bleConfigService } from '../services/ble-config.service';
@@ -31,13 +30,24 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected }) => {
 
   const loadConfig = async () => {
     try {
-      const config = await bleConfigService.readConfig();
+      // First try to get cached config (already read during connection)
+      let config = bleConfigService.getCachedConfig();
+
+      if (!config) {
+        // Fallback: read from device if cache is empty
+        console.log('Cache miss, reading motor config from device...');
+        config = await bleConfigService.readConfig();
+      } else {
+        console.log('Using cached motor config');
+      }
+
       setMode(config.mode);
       setCustomFrequency(config.customFrequency);
       setCustomDutyCycle(config.customDutyCycle);
       setPWMIntensity(config.pwmIntensity);
     } catch (error) {
       console.error('Failed to load motor config:', error);
+      alert('Warning: Failed to read motor configuration from device.');
     }
   };
 

@@ -35,7 +35,22 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected }) => {
 
   const loadConfig = async () => {
     try {
-      const config = await bleConfigService.readConfig();
+      // First try to get cached config (already read during connection)
+      let config = bleConfigService.getCachedConfig();
+
+      if (!config) {
+        // Fallback: read from device if cache is empty
+        console.log('Cache miss, reading LED config from device...');
+        config = await bleConfigService.readConfig();
+      } else {
+        console.log('Using cached LED config:', {
+          ledEnable: config.ledEnable,
+          ledColorMode: config.ledColorMode,
+          ledPaletteIndex: config.ledPaletteIndex,
+          ledBrightness: config.ledBrightness,
+        });
+      }
+
       setLEDEnable(config.ledEnable);
       setColorMode(config.ledColorMode);
       setPaletteIndex(config.ledPaletteIndex);
@@ -43,6 +58,8 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected }) => {
       setBrightness(config.ledBrightness);
     } catch (error) {
       console.error('Failed to load LED config:', error);
+      // Show error to user instead of silently failing
+      alert('Warning: Failed to read LED state from device. The displayed state may not match the device.');
     }
   };
 

@@ -38,12 +38,23 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
 
   const loadConfig = async () => {
     try {
-      const config = await bleConfigService.readConfig();
+      // First try to get cached config (already read during connection)
+      let config = bleConfigService.getCachedConfig();
+
+      if (!config) {
+        // Fallback: read from device if cache is empty
+        console.log('Cache miss, reading status config from device...');
+        config = await bleConfigService.readConfig();
+      } else {
+        console.log('Using cached status config');
+      }
+
       setSessionDuration(config.sessionDuration);
       setSessionTime(config.sessionTime);
       setBatteryLevel(config.batteryLevel);
     } catch (error) {
       console.error('Failed to load status config:', error);
+      alert('Warning: Failed to read device status.');
     }
   };
 
