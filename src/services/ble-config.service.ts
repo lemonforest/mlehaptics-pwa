@@ -87,6 +87,7 @@ export interface DeviceConfig {
 export interface ScanOptions {
   namePrefix?: string; // Filter devices by name prefix (e.g., "EMDR", "MLEHaptics")
   acceptAllDevices?: boolean; // Show all BLE devices (for testing/debugging)
+  disableAutoNotifications?: boolean; // Disable automatic notifications for battery/session time (use polling instead)
 }
 
 export class BLEConfigService {
@@ -97,6 +98,7 @@ export class BLEConfigService {
 
   private listeners: Map<string, Set<(value: any) => void>> = new Map();
   private cachedConfig: DeviceConfig | null = null;
+  private autoNotificationsEnabled: boolean = true;
 
   private buildRequestOptions(options: ScanOptions): RequestDeviceOptions {
     // If acceptAllDevices is true, show all BLE devices (testing mode)
@@ -132,6 +134,9 @@ export class BLEConfigService {
 
   async connect(options: ScanOptions = {}): Promise<void> {
     try {
+      // Store notification preference
+      this.autoNotificationsEnabled = !options.disableAutoNotifications;
+
       // Build request device options based on scan options
       const requestOptions: RequestDeviceOptions = this.buildRequestOptions(options);
 
@@ -151,8 +156,12 @@ export class BLEConfigService {
       // Get all characteristics
       await this.discoverCharacteristics();
 
-      // Setup notifications for read-only characteristics
-      await this.setupNotifications();
+      // Setup notifications for read-only characteristics (only if enabled)
+      if (this.autoNotificationsEnabled) {
+        await this.setupNotifications();
+      } else {
+        console.log('Auto-notifications disabled. Using polling mode for battery/session time.');
+      }
 
       // Read and cache initial configuration to ensure UI sync
       console.log('Reading initial device configuration...');
@@ -394,6 +403,30 @@ export class BLEConfigService {
 
   async setSessionDuration(duration: number): Promise<void> {
     await this.writeUint32('SESSION_DURATION', duration);
+  }
+
+  /**
+   * Read current session time from device (for polling mode)
+   * @returns Current elapsed session time in seconds
+   */
+  async readSessionTime(): Promise<number> {
+    return await this.readUint32('SESSION_TIME');
+  }
+
+  /**
+   * Read current battery level from device (for polling mode)
+   * @returns Battery level (0-100)
+   */
+  async readBatteryLevel(): Promise<number> {
+    return await this.readUint8('BATTERY_LEVEL');
+  }
+
+  /**
+   * Check if auto-notifications are enabled
+   * @returns true if notifications are enabled, false if polling mode
+   */
+  isAutoNotificationsEnabled(): boolean {
+    return this.autoNotificationsEnabled;
   }
 }
 

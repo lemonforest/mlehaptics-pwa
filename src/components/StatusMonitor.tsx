@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -15,6 +15,8 @@ import Battery50Icon from '@mui/icons-material/Battery50';
 import Battery20Icon from '@mui/icons-material/Battery20';
 import TimerIcon from '@mui/icons-material/Timer';
 import { bleConfigService } from '../services/ble-config.service';
+import { useSessionTimer } from '../hooks/useSessionTimer';
+import { useBatteryLevel } from '../hooks/useBatteryLevel';
 
 interface StatusMonitorProps {
   connected: boolean;
@@ -22,21 +24,50 @@ interface StatusMonitorProps {
 
 export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
   const [sessionDuration, setSessionDuration] = useState(1200); // 20 min default
-  const [sessionTime, setSessionTime] = useState(0);
-  const [batteryLevel, setBatteryLevel] = useState(100);
 
-  useEffect(() => {
-    if (connected) {
-      loadConfig();
-      setupNotifications();
-    }
+  // Initialize with default values
+  const [initialSessionTime, setInitialSessionTime] = useState(0);
+  const [initialBatteryLevel, setInitialBatteryLevel] = useState(100);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-    return () => {
-      // Cleanup subscriptions
-    };
+  // Sync function for session timer
+  const syncSessionTime = useCallback(async () => {
+    if (!connected) return 0;
+    return await bleConfigService.readSessionTime();
   }, [connected]);
 
-  const loadConfig = async () => {
+  // Read function for battery level
+  const readBatteryLevel = useCallback(async () => {
+    if (!connected) return 100;
+    return await bleConfigService.readBatteryLevel();
+  }, [connected]);
+
+  // Use custom hooks for optimized polling
+  const sessionTimer = useSessionTimer({
+    initialTime: initialSessionTime,
+    duration: sessionDuration,
+    onSync: syncSessionTime,
+    syncInterval: 30000, // Sync every 30 seconds
+    autoStart: connected && isInitialized,
+  });
+
+  const battery = useBatteryLevel({
+    initialLevel: initialBatteryLevel,
+    onRead: readBatteryLevel,
+    pollInterval: 30000, // Poll every 30 seconds
+    autoStart: connected && isInitialized,
+  });
+
+  // Load initial config when connected
+  useEffect(() => {
+    if (connected) {
+      loadInitialConfig();
+    } else {
+      setIsInitialized(false);
+    }
+  }, [connected]);
+
+  const loadInitialConfig = async () => {
     try {
       // First try to get cached config (already read during connection)
       let config = bleConfigService.getCachedConfig();
@@ -50,29 +81,22 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
       }
 
       setSessionDuration(config.sessionDuration);
-      setSessionTime(config.sessionTime);
-      setBatteryLevel(config.batteryLevel);
+      setInitialSessionTime(config.sessionTime);
+      setInitialBatteryLevel(config.batteryLevel);
+
+      // Set initial values in hooks
+      sessionTimer.setTime(config.sessionTime);
+      battery.setBatteryLevel(config.batteryLevel);
+
+      setIsInitialized(true);
+
+      console.log('✅ Optimized polling mode active:');
+      console.log('  - Session time: local counter with 30s device sync');
+      console.log('  - Battery level: reads every 30s');
     } catch (error) {
       console.error('Failed to load status config:', error);
       alert('Warning: Failed to read device status.');
     }
-  };
-
-  const setupNotifications = () => {
-    // Subscribe to session time updates
-    const unsubscribeTime = bleConfigService.subscribe('SESSION_TIME', (value: number) => {
-      setSessionTime(value);
-    });
-
-    // Subscribe to battery level updates
-    const unsubscribeBattery = bleConfigService.subscribe('BATTERY_LEVEL', (value: number) => {
-      setBatteryLevel(value);
-    });
-
-    return () => {
-      unsubscribeTime();
-      unsubscribeBattery();
-    };
   };
 
   const handleDurationChange = async (_: Event, value: number | number[]) => {
@@ -94,19 +118,11 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
   };
 
   const getBatteryIcon = () => {
-    if (batteryLevel > 75) return <BatteryFullIcon />;
-    if (batteryLevel > 50) return <Battery80Icon />;
-    if (batteryLevel > 25) return <Battery50Icon />;
+    if (battery.batteryLevel > 75) return <BatteryFullIcon />;
+    if (battery.batteryLevel > 50) return <Battery80Icon />;
+    if (battery.batteryLevel > 25) return <Battery50Icon />;
     return <Battery20Icon />;
   };
-
-  const getBatteryColor = () => {
-    if (batteryLevel > 50) return 'success';
-    if (batteryLevel > 25) return 'warning';
-    return 'error';
-  };
-
-  const sessionProgress = (sessionTime / sessionDuration) * 100;
 
   return (
     <Card>
@@ -151,18 +167,18 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
                 <Typography>Session Progress</Typography>
               </Box>
               <Chip
-                label={`${formatTime(sessionTime)} / ${formatTime(sessionDuration)}`}
+                label={`${formatTime(sessionTimer.sessionTime)} / ${formatTime(sessionDuration)}`}
                 size="small"
-                color={sessionProgress >= 100 ? 'success' : 'default'}
+                color={sessionTimer.progress >= 100 ? 'success' : 'default'}
               />
             </Box>
             <LinearProgress
               variant="determinate"
-              value={Math.min(sessionProgress, 100)}
+              value={Math.min(sessionTimer.progress, 100)}
               sx={{ height: 10, borderRadius: 1 }}
             />
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-              {sessionProgress >= 100 ? 'Session complete!' : `${Math.round(sessionProgress)}% complete`}
+              {sessionTimer.progress >= 100 ? 'Session complete!' : `${Math.round(sessionTimer.progress)}% complete`}
             </Typography>
           </Grid>
 
@@ -173,18 +189,18 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
                 <Typography>Battery Level</Typography>
               </Box>
               <Chip
-                label={`${batteryLevel}%`}
+                label={`${battery.batteryLevel}%`}
                 size="small"
-                color={getBatteryColor()}
+                color={battery.color}
               />
             </Box>
             <LinearProgress
               variant="determinate"
-              value={batteryLevel}
-              color={getBatteryColor()}
+              value={battery.batteryLevel}
+              color={battery.color}
               sx={{ height: 10, borderRadius: 1 }}
             />
-            {batteryLevel < 20 && (
+            {battery.isLow && (
               <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
                 Low battery! Please charge the device.
               </Typography>
