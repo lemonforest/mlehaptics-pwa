@@ -10,15 +10,23 @@ import {
   Snackbar,
   IconButton,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import BluetoothIcon from '@mui/icons-material/Bluetooth';
 import BluetoothConnectedIcon from '@mui/icons-material/BluetoothConnected';
 import BluetoothDisabledIcon from '@mui/icons-material/BluetoothDisabled';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import SettingsIcon from '@mui/icons-material/Settings';
 import { MotorControl } from './components/MotorControl';
 import { LEDControl } from './components/LEDControl';
 import { StatusMonitor } from './components/StatusMonitor';
-import { bleConfigService } from './services/ble-config.service';
+import { bleConfigService, ScanOptions } from './services/ble-config.service';
 
 function App() {
   const [connected, setConnected] = useState(false);
@@ -26,6 +34,11 @@ function App() {
   const [error, setError] = useState<string>('');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [bluetoothAvailable, setBluetoothAvailable] = useState(true);
+
+  // Scan options state
+  const [scanDialogOpen, setScanDialogOpen] = useState(false);
+  const [namePrefix, setNamePrefix] = useState<string>('');
+  const [acceptAllDevices, setAcceptAllDevices] = useState(false);
 
   useEffect(() => {
     // Check if Web Bluetooth is available
@@ -35,18 +48,32 @@ function App() {
     }
   }, []);
 
-  const handleConnect = async () => {
+  const handleConnect = async (scanOptions?: ScanOptions) => {
     try {
       setError('');
-      await bleConfigService.connect();
+      const options = scanOptions || {
+        namePrefix: namePrefix || undefined,
+        acceptAllDevices: acceptAllDevices,
+      };
+      await bleConfigService.connect(options);
       setConnected(true);
       setDeviceName(bleConfigService.getDeviceName());
       setSnackbarOpen(true);
+      setScanDialogOpen(false);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to connect to device';
       setError(errorMessage);
       setConnected(false);
     }
+  };
+
+  const handleQuickConnect = () => {
+    // Quick connect with default options (service UUID filter only)
+    handleConnect({});
+  };
+
+  const handleAdvancedScan = () => {
+    setScanDialogOpen(true);
   };
 
   const handleDisconnect = async () => {
@@ -94,9 +121,14 @@ function App() {
               </IconButton>
             </>
           )}
+          {!connected && (
+            <IconButton color="inherit" onClick={handleAdvancedScan} disabled={!bluetoothAvailable}>
+              <SettingsIcon />
+            </IconButton>
+          )}
           <Button
             color="inherit"
-            onClick={connected ? handleDisconnect : handleConnect}
+            onClick={connected ? handleDisconnect : handleQuickConnect}
             disabled={!bluetoothAvailable}
             startIcon={connected ? <BluetoothDisabledIcon /> : <BluetoothIcon />}
           >
@@ -104,6 +136,77 @@ function App() {
           </Button>
         </Toolbar>
       </AppBar>
+
+      {/* Scan Options Dialog */}
+      <Dialog open={scanDialogOpen} onClose={() => setScanDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Scan Options</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 2 }}>
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                Customize how the app scans for BLE devices. By default, only devices advertising the Configuration Service are shown.
+              </Typography>
+            </Alert>
+
+            <TextField
+              label="Device Name Prefix"
+              placeholder="e.g., EMDR, MLEHaptics"
+              value={namePrefix}
+              onChange={(e) => setNamePrefix(e.target.value)}
+              helperText="Filter devices by name prefix (leave empty to show all)"
+              fullWidth
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={acceptAllDevices}
+                  onChange={(e) => setAcceptAllDevices(e.target.checked)}
+                />
+              }
+              label="Show All BLE Devices (Testing Mode)"
+            />
+
+            {acceptAllDevices && (
+              <Alert severity="warning">
+                <Typography variant="body2">
+                  <strong>Testing Mode:</strong> All nearby BLE devices will be shown, even if they don't support the Configuration Service.
+                  This may cause connection errors if you select an incompatible device.
+                </Typography>
+              </Alert>
+            )}
+
+            <Box sx={{ bgcolor: 'background.default', p: 2, borderRadius: 1 }}>
+              <Typography variant="caption" color="text.secondary">
+                <strong>Tips:</strong>
+              </Typography>
+              <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                <li>
+                  <Typography variant="caption" color="text.secondary">
+                    Leave options empty for standard scanning (service UUID only)
+                  </Typography>
+                </li>
+                <li>
+                  <Typography variant="caption" color="text.secondary">
+                    Use name prefix if you know your device name pattern
+                  </Typography>
+                </li>
+                <li>
+                  <Typography variant="caption" color="text.secondary">
+                    Enable "Show All" for debugging with tools like nRF Connect
+                  </Typography>
+                </li>
+              </ul>
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setScanDialogOpen(false)}>Cancel</Button>
+          <Button onClick={() => handleConnect()} variant="contained">
+            Scan & Connect
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
         {!bluetoothAvailable && (

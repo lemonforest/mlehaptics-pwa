@@ -84,6 +84,11 @@ export interface DeviceConfig {
   batteryLevel: number; // 0-100% (read-only)
 }
 
+export interface ScanOptions {
+  namePrefix?: string; // Filter devices by name prefix (e.g., "EMDR", "MLEHaptics")
+  acceptAllDevices?: boolean; // Show all BLE devices (for testing/debugging)
+}
+
 export class BLEConfigService {
   private device: BluetoothDevice | null = null;
   private server: BluetoothRemoteGATTServer | null = null;
@@ -92,13 +97,44 @@ export class BLEConfigService {
 
   private listeners: Map<string, Set<(value: any) => void>> = new Map();
 
-  async connect(): Promise<void> {
-    try {
-      // Request device with Configuration Service
-      this.device = await navigator.bluetooth.requestDevice({
-        filters: [{ services: [CONFIG_SERVICE_UUID] }],
+  private buildRequestOptions(options: ScanOptions): RequestDeviceOptions {
+    // If acceptAllDevices is true, show all BLE devices (testing mode)
+    if (options.acceptAllDevices) {
+      return {
+        acceptAllDevices: true,
         optionalServices: [CONFIG_SERVICE_UUID],
+      };
+    }
+
+    // Build filters array
+    const filters: BluetoothLEScanFilter[] = [];
+
+    // Filter by name prefix if provided
+    if (options.namePrefix) {
+      filters.push({
+        namePrefix: options.namePrefix,
+        services: [CONFIG_SERVICE_UUID],
       });
+    } else {
+      // Default: filter by service UUID only
+      filters.push({
+        services: [CONFIG_SERVICE_UUID],
+      });
+    }
+
+    return {
+      filters,
+      optionalServices: [CONFIG_SERVICE_UUID],
+    };
+  }
+
+  async connect(options: ScanOptions = {}): Promise<void> {
+    try {
+      // Build request device options based on scan options
+      const requestOptions: RequestDeviceOptions = this.buildRequestOptions(options);
+
+      // Request device with Configuration Service
+      this.device = await navigator.bluetooth.requestDevice(requestOptions);
 
       if (!this.device.gatt) {
         throw new Error('GATT not supported');

@@ -90,9 +90,43 @@ npm run preview
 
 ## Usage
 
+### Device Scanning & Connection
+
+The app provides flexible scanning options to find your MLEHaptics device:
+
+#### Quick Connect (Default)
+1. Click "Connect Device" in the top-right corner
+2. Browser shows devices advertising the Configuration Service
+3. Select your MLEHaptics device from the list
+4. Device name will appear once connected
+
+**Note:** You do NOT need to pair the device in your phone/computer's Bluetooth settings. The app handles the connection directly via Web Bluetooth API.
+
+#### Advanced Scan Options
+
+For more control over device discovery, click the **Settings icon (⚙️)** next to "Connect Device":
+
+1. **Device Name Prefix** - Filter devices by name pattern
+   - Example: Enter "EMDR" to show only devices starting with "EMDR-"
+   - Leave empty to show all devices with the Configuration Service
+
+2. **Show All BLE Devices (Testing Mode)** - Display all nearby BLE devices
+   - Useful for debugging or when testing with tools like nRF Connect
+   - **Warning:** May show incompatible devices that will fail to connect
+
+#### Connection Tips
+
+- Ensure device is powered on and advertising
+- Keep device within 10 meters (closer is better)
+- **No pairing required** - Web Bluetooth handles connection directly
+- If device doesn't appear, try refreshing the scan
+- Only one app can connect at a time (disconnect from nRF Connect first)
+
+### Configuration
+
 1. **Connect Device**
-   - Click "Connect Device" in the top-right corner
-   - Select your MLEHaptics device from the browser's Bluetooth pairing dialog
+   - Use quick connect or advanced scan options
+   - Select your MLEHaptics device from the browser's Bluetooth dialog
    - Device name will appear once connected
 
 2. **Configure Motor Settings**
