@@ -3,8 +3,10 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - claude/build-progressive-web-app-011CV3FMycJqipeGGhntFMtw
-      - claude/fix-device-discovery-led-sync-011CV3SA86jDKjxFcnqJUKqA
+      - main
+      - master
+      # Also trigger from Claude branches for development
+      - 'claude/**'
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
