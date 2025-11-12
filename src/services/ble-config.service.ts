@@ -96,6 +96,7 @@ export class BLEConfigService {
   private characteristics: Map<string, BluetoothRemoteGATTCharacteristic> = new Map();
 
   private listeners: Map<string, Set<(value: any) => void>> = new Map();
+  private cachedConfig: DeviceConfig | null = null;
 
   private buildRequestOptions(options: ScanOptions): RequestDeviceOptions {
     // If acceptAllDevices is true, show all BLE devices (testing mode)
@@ -111,9 +112,10 @@ export class BLEConfigService {
 
     // Filter by name prefix if provided
     if (options.namePrefix) {
+      // Only filter by name prefix - don't require service in advertisement
+      // (many devices don't advertise all services to save space)
       filters.push({
         namePrefix: options.namePrefix,
-        services: [CONFIG_SERVICE_UUID],
       });
     } else {
       // Default: filter by service UUID only
@@ -151,6 +153,11 @@ export class BLEConfigService {
 
       // Setup notifications for read-only characteristics
       await this.setupNotifications();
+
+      // Read and cache initial configuration to ensure UI sync
+      console.log('Reading initial device configuration...');
+      this.cachedConfig = await this.readConfig();
+      console.log('Initial configuration loaded:', this.cachedConfig);
     } catch (error) {
       console.error('BLE connection failed:', error);
       throw error;
@@ -166,6 +173,7 @@ export class BLEConfigService {
     this.service = null;
     this.characteristics.clear();
     this.listeners.clear();
+    this.cachedConfig = null;
   }
 
   isConnected(): boolean {
@@ -325,7 +333,7 @@ export class BLEConfigService {
 
   // High-level configuration methods
   async readConfig(): Promise<DeviceConfig> {
-    return {
+    const config = {
       mode: await this.readUint8('MODE') as MotorMode,
       customFrequency: await this.readUint16('CUSTOM_FREQUENCY'),
       customDutyCycle: await this.readUint8('CUSTOM_DUTY_CYCLE'),
@@ -339,6 +347,13 @@ export class BLEConfigService {
       sessionTime: await this.readUint32('SESSION_TIME'),
       batteryLevel: await this.readUint8('BATTERY_LEVEL'),
     };
+    // Update cache
+    this.cachedConfig = config;
+    return config;
+  }
+
+  getCachedConfig(): DeviceConfig | null {
+    return this.cachedConfig;
   }
 
   async setMotorMode(mode: MotorMode): Promise<void> {
