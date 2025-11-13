@@ -188,25 +188,50 @@ export class BLEConfigService {
 
   async disconnect(): Promise<void> {
     try {
+      if (!this.device?.gatt?.connected) {
+        console.log('Device already disconnected');
+        this.handleDisconnect();
+        return;
+      }
+
+      console.log('Starting disconnect sequence...');
+
       // Step 1: Stop all notifications and remove characteristic event listeners
       // This is critical for Android to properly release BLE resources
       console.log('Cleaning up notifications and event listeners...');
       await this.stopNotifications();
 
-      // Step 2: Remove the gattserverdisconnected event listener
+      // Step 2: Perform a final characteristic read to ensure BLE connection is active
+      // This is a workaround for Android Chrome where gatt.disconnect() doesn't always
+      // send the disconnect packet if the connection is "idle"
+      try {
+        console.log('Performing final read to activate BLE connection...');
+        await this.readUint8('MODE');
+        console.log('Final read completed');
+      } catch (readError) {
+        console.warn('Final read failed (connection may already be unstable):', readError);
+      }
+
+      // Step 3: Small delay to let the read complete and BLE stack stabilize
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Step 4: Remove the gattserverdisconnected event listener
+      // We'll clean up manually instead of letting the event trigger
       if (this.device && this.disconnectHandler) {
         this.device.removeEventListener('gattserverdisconnected', this.disconnectHandler);
-        this.disconnectHandler = null;
       }
 
-      // Step 3: Disconnect GATT server
-      // This triggers the gattserverdisconnected event, but we've already removed our listener
-      if (this.device?.gatt?.connected) {
-        console.log('Disconnecting GATT server...');
-        this.device.gatt.disconnect();
-      }
+      // Step 5: Disconnect GATT server
+      // After the characteristic read, the BLE stack should now send the disconnect packet
+      console.log('Sending disconnect to GATT server...');
+      this.device.gatt.disconnect();
 
-      // Step 4: Clean up all references
+      // Step 6: Wait to ensure disconnect packet is sent by BLE stack
+      // Android needs this delay to actually transmit the disconnect
+      console.log('Waiting for disconnect packet to be sent...');
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      // Step 7: Clean up all references
       this.handleDisconnect();
 
       console.log('Disconnect complete');
