@@ -26,6 +26,17 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected }) => {
   useEffect(() => {
     if (connected) {
       loadConfig();
+
+      // Subscribe to MODE notifications to detect changes from device button
+      const unsubscribe = bleConfigService.subscribe('MODE', (newMode: MotorMode) => {
+        console.log('MODE changed on device:', newMode);
+        setMode(newMode);
+      });
+
+      // Cleanup subscription on disconnect
+      return () => {
+        unsubscribe();
+      };
     }
   }, [connected]);
 
