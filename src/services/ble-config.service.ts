@@ -100,6 +100,11 @@ export class BLEConfigService {
   private cachedConfig: DeviceConfig | null = null;
   private autoNotificationsEnabled: boolean = true;
 
+  // Track event listeners for proper cleanup
+  private characteristicEventListeners: Map<string, (event: Event) => void> = new Map();
+  private characteristicsWithNotifications: Set<string> = new Set();
+  private disconnectHandler: (() => void) | null = null;
+
   private buildRequestOptions(options: ScanOptions): RequestDeviceOptions {
     // If acceptAllDevices is true, show all BLE devices (testing mode)
     if (options.acceptAllDevices) {
@@ -147,6 +152,14 @@ export class BLEConfigService {
         throw new Error('GATT not supported');
       }
 
+      // Setup disconnect event listener before connecting
+      // This handles both user-initiated and unexpected disconnects
+      this.disconnectHandler = () => {
+        console.log('Device disconnected (gattserverdisconnected event)');
+        this.handleDisconnect();
+      };
+      this.device.addEventListener('gattserverdisconnected', this.disconnectHandler);
+
       // Connect to GATT server
       this.server = await this.device.gatt.connect();
 
@@ -174,15 +187,48 @@ export class BLEConfigService {
   }
 
   async disconnect(): Promise<void> {
-    if (this.device?.gatt?.connected) {
-      this.device.gatt.disconnect();
+    try {
+      // Step 1: Stop all notifications and remove characteristic event listeners
+      // This is critical for Android to properly release BLE resources
+      console.log('Cleaning up notifications and event listeners...');
+      await this.stopNotifications();
+
+      // Step 2: Remove the gattserverdisconnected event listener
+      if (this.device && this.disconnectHandler) {
+        this.device.removeEventListener('gattserverdisconnected', this.disconnectHandler);
+        this.disconnectHandler = null;
+      }
+
+      // Step 3: Disconnect GATT server
+      // This triggers the gattserverdisconnected event, but we've already removed our listener
+      if (this.device?.gatt?.connected) {
+        console.log('Disconnecting GATT server...');
+        this.device.gatt.disconnect();
+      }
+
+      // Step 4: Clean up all references
+      this.handleDisconnect();
+
+      console.log('Disconnect complete');
+    } catch (error) {
+      console.error('Error during disconnect:', error);
+      // Still clean up references even if there was an error
+      this.handleDisconnect();
     }
+  }
+
+  private handleDisconnect(): void {
+    // Clean up all internal state
+    // This is called both by disconnect() and by the gattserverdisconnected event
     this.device = null;
     this.server = null;
     this.service = null;
     this.characteristics.clear();
     this.listeners.clear();
     this.cachedConfig = null;
+    this.characteristicsWithNotifications.clear();
+    this.characteristicEventListeners.clear();
+    this.disconnectHandler = null;
   }
 
   isConnected(): boolean {
@@ -215,14 +261,45 @@ export class BLEConfigService {
       if (char) {
         try {
           await char.startNotifications();
-          char.addEventListener('characteristicvaluechanged', (event) => {
+          this.characteristicsWithNotifications.add(charKey);
+
+          // Create and store event listener for cleanup
+          const listener = (event: Event) => {
             this.handleCharacteristicChange(charKey, event.target as BluetoothRemoteGATTCharacteristic);
-          });
+          };
+          this.characteristicEventListeners.set(charKey, listener);
+          char.addEventListener('characteristicvaluechanged', listener);
         } catch (error) {
           console.warn(`Failed to setup notifications for ${charKey}:`, error);
         }
       }
     }
+  }
+
+  private async stopNotifications(): Promise<void> {
+    // Stop all notifications and remove event listeners
+    for (const charKey of this.characteristicsWithNotifications) {
+      const char = this.characteristics.get(charKey);
+      const listener = this.characteristicEventListeners.get(charKey);
+
+      if (char && listener) {
+        try {
+          // Remove event listener first
+          char.removeEventListener('characteristicvaluechanged', listener);
+
+          // Stop notifications if still connected
+          if (this.device?.gatt?.connected) {
+            await char.stopNotifications();
+          }
+        } catch (error) {
+          console.warn(`Failed to cleanup notifications for ${charKey}:`, error);
+        }
+      }
+    }
+
+    // Clear tracking sets/maps
+    this.characteristicsWithNotifications.clear();
+    this.characteristicEventListeners.clear();
   }
 
   private handleCharacteristicChange(key: string, char: BluetoothRemoteGATTCharacteristic): void {
