@@ -13,19 +13,24 @@ import {
   Grid,
   Button,
   Chip,
+  Alert,
 } from '@mui/material';
-import { COLOR_PALETTE, bleConfigService } from '../services/ble-config.service';
+import { COLOR_PALETTE, bleConfigService, MotorMode, MOTOR_MODE_LABELS } from '../services/ble-config.service';
 
 interface LEDControlProps {
   connected: boolean;
+  motorMode: MotorMode;
 }
 
-export const LEDControl: React.FC<LEDControlProps> = ({ connected }) => {
+export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) => {
   const [ledEnable, setLEDEnable] = useState(false);
   const [colorMode, setColorMode] = useState(1); // 0=palette, 1=custom RGB
   const [paletteIndex, setPaletteIndex] = useState(0);
   const [customRGB, setCustomRGB] = useState<[number, number, number]>([255, 0, 0]);
   const [brightness, setBrightness] = useState(20);
+
+  // LED settings are only configurable in Custom mode
+  const isCustomMode = motorMode === MotorMode.MODE_CUSTOM;
 
   useEffect(() => {
     if (connected) {
@@ -153,6 +158,12 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected }) => {
           LED Control
         </Typography>
 
+        {!isCustomMode && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            LED settings are only available in Custom motor mode. Currently in: <strong>{MOTOR_MODE_LABELS[motorMode]}</strong>
+          </Alert>
+        )}
+
         <Grid container spacing={3}>
           <Grid item xs={12}>
             <FormControlLabel
@@ -160,7 +171,7 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected }) => {
                 <Switch
                   checked={ledEnable}
                   onChange={handleLEDEnableChange}
-                  disabled={!connected}
+                  disabled={!connected || !isCustomMode}
                 />
               }
               label="LED Enable"
@@ -168,7 +179,7 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected }) => {
           </Grid>
 
           <Grid item xs={12}>
-            <FormControl component="fieldset" disabled={!connected || !ledEnable}>
+            <FormControl component="fieldset" disabled={!connected || !isCustomMode || !ledEnable}>
               <Typography gutterBottom>Color Mode</Typography>
               <RadioGroup value={colorMode} onChange={handleColorModeChange} row>
                 <FormControlLabel value={0} control={<Radio />} label="Palette" />
@@ -186,7 +197,7 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected }) => {
                     key={index}
                     variant={paletteIndex === index ? 'contained' : 'outlined'}
                     onClick={() => handlePaletteSelect(index)}
-                    disabled={!connected || !ledEnable}
+                    disabled={!connected || !isCustomMode || !ledEnable}
                     sx={{
                       minWidth: 80,
                       bgcolor: paletteIndex === index ? rgbToHex(color.rgb as [number, number, number]) : 'transparent',
@@ -213,7 +224,7 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected }) => {
                     onChange={(_, value) => handleRGBChange('r', value as number)}
                     min={0}
                     max={255}
-                    disabled={!connected || !ledEnable}
+                    disabled={!connected || !isCustomMode || !ledEnable}
                     sx={{ color: '#f44336', touchAction: 'none' }}
                   />
                 </Box>
@@ -227,7 +238,7 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected }) => {
                     onChange={(_, value) => handleRGBChange('g', value as number)}
                     min={0}
                     max={255}
-                    disabled={!connected || !ledEnable}
+                    disabled={!connected || !isCustomMode || !ledEnable}
                     sx={{ color: '#4caf50', touchAction: 'none' }}
                   />
                 </Box>
@@ -241,7 +252,7 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected }) => {
                     onChange={(_, value) => handleRGBChange('b', value as number)}
                     min={0}
                     max={255}
-                    disabled={!connected || !ledEnable}
+                    disabled={!connected || !isCustomMode || !ledEnable}
                     sx={{ color: '#2196f3', touchAction: 'none' }}
                   />
                 </Box>
@@ -285,7 +296,7 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected }) => {
                   { value: 20, label: '20%' },
                   { value: 30, label: '30%' },
                 ]}
-                disabled={!connected || !ledEnable}
+                disabled={!connected || !isCustomMode || !ledEnable}
                 valueLabelDisplay="auto"
                 valueLabelFormat={(value) => `${value}%`}
                 sx={{ touchAction: 'none' }}
