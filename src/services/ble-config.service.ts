@@ -278,8 +278,8 @@ export class BLEConfigService {
   }
 
   private async setupNotifications(): Promise<void> {
-    // Setup notifications for read-only characteristics
-    const notifyChars = ['SESSION_TIME', 'BATTERY_LEVEL'];
+    // Setup notifications for status characteristics and MODE (if supported by firmware)
+    const notifyChars = ['SESSION_TIME', 'BATTERY_LEVEL', 'MODE'];
 
     for (const charKey of notifyChars) {
       const char = this.characteristics.get(charKey);
@@ -294,6 +294,7 @@ export class BLEConfigService {
           };
           this.characteristicEventListeners.set(charKey, listener);
           char.addEventListener('characteristicvaluechanged', listener);
+          console.log(`Notifications enabled for ${charKey}`);
         } catch (error) {
           console.warn(`Failed to setup notifications for ${charKey}:`, error);
         }

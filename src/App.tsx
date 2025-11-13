@@ -20,7 +20,6 @@ import {
 import BluetoothIcon from '@mui/icons-material/Bluetooth';
 import BluetoothConnectedIcon from '@mui/icons-material/BluetoothConnected';
 import BluetoothDisabledIcon from '@mui/icons-material/BluetoothDisabled';
-import RefreshIcon from '@mui/icons-material/Refresh';
 import SettingsIcon from '@mui/icons-material/Settings';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import { MotorControl } from './components/MotorControl';
@@ -103,18 +102,6 @@ function App() {
     }
   };
 
-  const handleRefresh = async () => {
-    if (connected) {
-      try {
-        // Force reload configuration from device
-        window.location.reload();
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to refresh';
-        setError(errorMessage);
-      }
-    }
-  };
-
   return (
     <Box sx={{ flexGrow: 1, minHeight: '100vh', bgcolor: 'background.default' }}>
       <AppBar position="static">
@@ -144,19 +131,12 @@ function App() {
               )}
             </Typography>
           </Box>
-          {connected && (
-            <IconButton color="inherit" onClick={handleRefresh}>
-              <RefreshIcon />
-            </IconButton>
-          )}
           <IconButton color="inherit" onClick={() => setPresetDialogOpen(true)} disabled={!bluetoothAvailable} title="Presets">
             <BookmarkIcon />
           </IconButton>
-          {!connected && (
-            <IconButton color="inherit" onClick={handleAdvancedScan} disabled={!bluetoothAvailable}>
-              <SettingsIcon />
-            </IconButton>
-          )}
+          <IconButton color="inherit" onClick={handleAdvancedScan} disabled={!bluetoothAvailable} title="Scan Options">
+            <SettingsIcon />
+          </IconButton>
           <Button
             color="inherit"
             onClick={connected ? handleDisconnect : handleQuickConnect}

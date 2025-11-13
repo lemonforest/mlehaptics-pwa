@@ -146,9 +146,6 @@ export const PresetManager: React.FC<PresetManagerProps> = ({ open, onClose, con
 
       // Close dialog after successful load
       onClose();
-
-      // Reload page to sync UI with new device state
-      window.location.reload();
     } catch (error) {
       console.error('Failed to load preset:', error);
       showSnackbar(`Failed to load preset: ${error}`, 'error');
