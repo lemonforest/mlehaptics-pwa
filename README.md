@@ -2,6 +2,12 @@
 
 Progressive Web App for configuring MLEHaptics BLE devices for EMDR therapy.
 
+## 📋 Architecture Documentation
+
+This PWA implements the **[AD032: BLE Configuration Service Architecture](https://github.com/lemonforest/mlehaptics/blob/main/docs/architecture_decisions.md#ad032-ble-configuration-service-architecture)** specification from the [MLEHaptics embedded firmware project](https://github.com/lemonforest/mlehaptics).
+
+AD032 defines the complete BLE service structure, characteristic UUIDs, parameter ranges, and device behavior. All features in this PWA are designed to be fully compliant with AD032.
+
 ## 🚀 Live App
 
 **Try it now:** [https://lemonforest.github.io/mlehaptics-pwa/](https://lemonforest.github.io/mlehaptics-pwa/)
