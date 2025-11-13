@@ -5,10 +5,8 @@ export interface SessionTimerConfig {
   initialTime: number;
   /** Session duration in seconds */
   duration: number;
-  /** Callback to sync with device, returns actual device time */
-  onSync?: () => Promise<number>;
-  /** Sync interval in milliseconds (default: 30000 = 30 seconds) */
-  syncInterval?: number;
+  /** Callback to subscribe to session time notifications from device */
+  onSubscribe?: (callback: (time: number) => void) => (() => void);
   /** Whether to start the timer automatically */
   autoStart?: boolean;
 }
@@ -22,24 +20,20 @@ export interface SessionTimerResult {
   progress: number;
   /** Whether the timer is running */
   isRunning: boolean;
-  /** Manually sync with device */
-  sync: () => Promise<void>;
   /** Start the timer */
   start: () => void;
   /** Stop the timer */
   stop: () => void;
-  /** Reset to initial time */
-  reset: () => void;
   /** Set session time directly */
   setTime: (time: number) => void;
 }
 
 /**
- * Custom hook for local session time tracking with periodic device sync.
+ * Custom hook for session time tracking with BLE notifications.
  *
- * This hook reduces BLE traffic by:
- * 1. Counting time locally (updates UI every second)
- * 2. Syncing with the device periodically (default: every 30 seconds)
+ * This hook uses a hybrid approach:
+ * 1. Counts time locally (updates UI every second for smooth progress)
+ * 2. Syncs with device notifications (every 60 seconds) to stay accurate
  *
  * @param config - Configuration for the session timer
  * @returns Session timer state and controls
@@ -48,8 +42,7 @@ export function useSessionTimer(config: SessionTimerConfig): SessionTimerResult 
   const {
     initialTime,
     duration,
-    onSync,
-    syncInterval = 30000, // 30 seconds default
+    onSubscribe,
     autoStart = true,
   } = config;
 
@@ -58,8 +51,6 @@ export function useSessionTimer(config: SessionTimerConfig): SessionTimerResult 
   const [isRunning, setIsRunning] = useState(autoStart);
 
   const timerRef = useRef<number | null>(null);
-  const syncTimerRef = useRef<number | null>(null);
-  const lastSyncRef = useRef<number>(Date.now());
 
   // Calculate progress percentage
   const progress = sessionDuration > 0
@@ -71,20 +62,11 @@ export function useSessionTimer(config: SessionTimerConfig): SessionTimerResult 
     setSessionDuration(duration);
   }, [duration]);
 
-  // Sync with device
-  const sync = useCallback(async () => {
-    if (!onSync) return;
-
-    try {
-      console.log('[SessionTimer] Syncing with device...');
-      const deviceTime = await onSync();
-      setSessionTime(deviceTime);
-      lastSyncRef.current = Date.now();
-      console.log(`[SessionTimer] Synced: device time = ${deviceTime}s`);
-    } catch (error) {
-      console.error('[SessionTimer] Sync failed:', error);
-    }
-  }, [onSync]);
+  // Handle device time updates - sync local time to device time
+  const handleTimeUpdate = useCallback((time: number) => {
+    console.log(`[SessionTimer] Device notification: ${time}s (syncing local time)`);
+    setSessionTime(time);
+  }, []);
 
   // Start timer
   const start = useCallback(() => {
@@ -96,18 +78,12 @@ export function useSessionTimer(config: SessionTimerConfig): SessionTimerResult 
     setIsRunning(false);
   }, []);
 
-  // Reset to initial time
-  const reset = useCallback(() => {
-    setSessionTime(initialTime);
-    lastSyncRef.current = Date.now();
-  }, [initialTime]);
-
   // Set time directly
   const setTime = useCallback((time: number) => {
     setSessionTime(time);
   }, []);
 
-  // Local timer - increment every second
+  // Local timer - increment every second for smooth UI
   useEffect(() => {
     if (!isRunning) {
       if (timerRef.current) {
@@ -128,44 +104,28 @@ export function useSessionTimer(config: SessionTimerConfig): SessionTimerResult 
     };
   }, [isRunning]);
 
-  // Periodic sync timer
+  // Subscribe to device notifications for periodic sync
   useEffect(() => {
-    if (!isRunning || !onSync) {
-      if (syncTimerRef.current) {
-        clearInterval(syncTimerRef.current);
-        syncTimerRef.current = null;
-      }
+    if (!onSubscribe) {
       return;
     }
 
-    // Sync periodically
-    syncTimerRef.current = setInterval(() => {
-      sync();
-    }, syncInterval);
+    console.log('[SessionTimer] Subscribing to device notifications (syncs every 60s)...');
+    const unsubscribe = onSubscribe(handleTimeUpdate);
 
     return () => {
-      if (syncTimerRef.current) {
-        clearInterval(syncTimerRef.current);
-      }
+      console.log('[SessionTimer] Unsubscribing from notifications...');
+      unsubscribe();
     };
-  }, [isRunning, onSync, syncInterval, sync]);
-
-  // Initial sync on mount if autoStart is true
-  useEffect(() => {
-    if (autoStart && onSync) {
-      sync();
-    }
-  }, [autoStart, onSync, sync]);
+  }, [onSubscribe, handleTimeUpdate]);
 
   return {
     sessionTime,
     sessionDuration,
     progress,
     isRunning,
-    sync,
     start,
     stop,
-    reset,
     setTime,
   };
 }
