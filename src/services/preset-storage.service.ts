@@ -53,7 +53,7 @@ const DEFAULT_PRESETS: Omit<DevicePreset, 'id' | 'createdAt'>[] = [
     config: {
       mode: MotorMode.MODE_1HZ_50,
       customFrequency: 200,
-      customDutyCycle: 75,
+      customDutyCycle: 50,
       pwmIntensity: 80,
       ledEnable: true,
       ledColorMode: 0,
