@@ -25,6 +25,28 @@ This is the **foundational specification** that defines:
 
 **Always consult AD032** when working on BLE-related features or characteristic implementations.
 
+### Local Architecture Documentation
+To avoid truncation issues when fetching the architecture decisions document from the web, a local copy is maintained:
+
+**Location:** `docs/external/architecture_decisions.md`
+
+**Update the local copy:**
+```bash
+npm run fetch-docs
+```
+
+This fetches the latest architecture decisions document from the mlehaptics embedded repo and saves it locally. The script:
+- Downloads the complete file (avoids web truncation)
+- Reports file size and line count
+- Shows the highest AD number found
+- Stores in `docs/external/` for easy reference
+
+**When to update:**
+- Before starting work on BLE features
+- When AD032 or other specs may have changed
+- If you see references to newer AD numbers (AD033, AD034, etc.)
+- After the embedded team announces spec updates
+
 ## Project Structure
 
 ```

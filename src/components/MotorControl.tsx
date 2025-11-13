@@ -201,11 +201,11 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected }) => {
                   <Slider
                     value={customDutyCycle}
                     onChange={handleDutyCycleChange}
-                    min={0}
+                    min={10}
                     max={50}
                     step={1}
                     marks={[
-                      { value: 0, label: '0%' },
+                      { value: 10, label: '10%' },
                       { value: 25, label: '25%' },
                       { value: 50, label: '50%' },
                     ]}
@@ -221,18 +221,18 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected }) => {
 
           <Grid item xs={12}>
             <Typography gutterBottom>
-              PWM Intensity: {pwmIntensity}%
+              PWM Intensity: {pwmIntensity}% {pwmIntensity === 0 && '(LED-only)'}
             </Typography>
             <Box sx={{ px: 2, py: 3 }}>
               <Slider
                 value={pwmIntensity}
                 onChange={handlePWMIntensityChange}
-                min={30}
+                min={0}
                 max={80}
                 step={1}
                 marks={[
-                  { value: 30, label: '30%' },
-                  { value: 55, label: '55%' },
+                  { value: 0, label: '0% (LED-only)' },
+                  { value: 40, label: '40%' },
                   { value: 80, label: '80%' },
                 ]}
                 disabled={!connected}
@@ -242,7 +242,7 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected }) => {
               />
             </Box>
             <Typography variant="caption" color="text.secondary">
-              Motor power safety limits (30-80%)
+              Motor power (0% = LED-only mode, 1-80% = motor + LED)
             </Typography>
           </Grid>
         </Grid>

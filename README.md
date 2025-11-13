@@ -23,8 +23,8 @@ This PWA implements the complete BLE Configuration Service architecture as defin
 #### Motor Control
 - **Preset Modes**: 5 predefined motor patterns (1Hz/0.5Hz @ 50%/25%, Custom)
 - **Custom Frequency**: 0.25-2.0 Hz research range (adjustable in 0.01 Hz increments)
-- **Custom Duty Cycle**: 0-50% perceptible range
-- **PWM Intensity**: 30-80% motor power safety limits
+- **Custom Duty Cycle**: 10-50% timing pattern range (50% max prevents overlap)
+- **PWM Intensity**: 0-80% motor power (0% = LED-only mode, no vibration)
 
 #### LED Control
 - **Dual Mode System**:
@@ -240,8 +240,8 @@ mlehaptics-pwa/
 |-----------|------|-------|-------------|
 | Mode | uint8 | 0-4 | Motor preset modes |
 | Custom Frequency | uint16 | 25-200 | Hz × 100 (0.25-2.0 Hz) |
-| Custom Duty | uint8 | 0-50 | Duty cycle percentage |
-| PWM Intensity | uint8 | 30-80 | Motor power percentage |
+| Custom Duty | uint8 | 10-50 | Duty cycle percentage |
+| PWM Intensity | uint8 | 0-80 | Motor power (0% = LED-only) |
 | LED Enable | uint8 | 0-1 | Off/On |
 | LED Color Mode | uint8 | 0-1 | Palette/Custom RGB |
 | LED Palette Index | uint8 | 0-15 | 16-color preset |
