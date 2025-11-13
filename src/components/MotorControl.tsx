@@ -158,13 +158,13 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected }) => {
                   <Slider
                     value={customDutyCycle}
                     onChange={handleDutyCycleChange}
-                    min={10}
-                    max={90}
+                    min={0}
+                    max={50}
                     step={1}
                     marks={[
-                      { value: 10, label: '10%' },
+                      { value: 0, label: '0%' },
+                      { value: 25, label: '25%' },
                       { value: 50, label: '50%' },
-                      { value: 90, label: '90%' },
                     ]}
                     disabled={!connected}
                     valueLabelDisplay="auto"

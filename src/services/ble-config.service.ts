@@ -68,7 +68,7 @@ export interface DeviceConfig {
   // Motor Control
   mode: MotorMode;
   customFrequency: number; // Hz × 100 (25-200 = 0.25-2.0 Hz)
-  customDutyCycle: number; // 10-90%
+  customDutyCycle: number; // 0-50%
   pwmIntensity: number; // 30-80%
 
   // LED Control
