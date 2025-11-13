@@ -54,7 +54,7 @@ export function useSessionTimer(config: SessionTimerConfig): SessionTimerResult 
   } = config;
 
   const [sessionTime, setSessionTime] = useState(initialTime);
-  const [sessionDuration] = useState(duration);
+  const [sessionDuration, setSessionDuration] = useState(duration);
   const [isRunning, setIsRunning] = useState(autoStart);
 
   const timerRef = useRef<number | null>(null);
@@ -65,6 +65,11 @@ export function useSessionTimer(config: SessionTimerConfig): SessionTimerResult 
   const progress = sessionDuration > 0
     ? Math.min((sessionTime / sessionDuration) * 100, 100)
     : 0;
+
+  // Update session duration when prop changes
+  useEffect(() => {
+    setSessionDuration(duration);
+  }, [duration]);
 
   // Sync with device
   const sync = useCallback(async () => {
