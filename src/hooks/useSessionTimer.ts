@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 export interface SessionTimerConfig {
   /** Initial session time in seconds */
@@ -7,7 +7,7 @@ export interface SessionTimerConfig {
   duration: number;
   /** Callback to subscribe to session time notifications from device */
   onSubscribe?: (callback: (time: number) => void) => (() => void);
-  /** Whether to start the subscription automatically */
+  /** Whether to start the timer automatically */
   autoStart?: boolean;
 }
 
@@ -18,6 +18,12 @@ export interface SessionTimerResult {
   sessionDuration: number;
   /** Progress percentage (0-100) */
   progress: number;
+  /** Whether the timer is running */
+  isRunning: boolean;
+  /** Start the timer */
+  start: () => void;
+  /** Stop the timer */
+  stop: () => void;
   /** Set session time directly */
   setTime: (time: number) => void;
 }
@@ -25,8 +31,9 @@ export interface SessionTimerResult {
 /**
  * Custom hook for session time tracking with BLE notifications.
  *
- * This hook uses the device's BLE notify characteristic to receive
- * real-time session time updates instead of polling.
+ * This hook uses a hybrid approach:
+ * 1. Counts time locally (updates UI every second for smooth progress)
+ * 2. Syncs with device notifications (every 60 seconds) to stay accurate
  *
  * @param config - Configuration for the session timer
  * @returns Session timer state and controls
@@ -41,6 +48,9 @@ export function useSessionTimer(config: SessionTimerConfig): SessionTimerResult 
 
   const [sessionTime, setSessionTime] = useState(initialTime);
   const [sessionDuration, setSessionDuration] = useState(duration);
+  const [isRunning, setIsRunning] = useState(autoStart);
+
+  const timerRef = useRef<number | null>(null);
 
   // Calculate progress percentage
   const progress = sessionDuration > 0
@@ -52,10 +62,20 @@ export function useSessionTimer(config: SessionTimerConfig): SessionTimerResult 
     setSessionDuration(duration);
   }, [duration]);
 
-  // Handle session time updates
+  // Handle device time updates - sync local time to device time
   const handleTimeUpdate = useCallback((time: number) => {
-    console.log(`[SessionTimer] Notification received: ${time}s`);
+    console.log(`[SessionTimer] Device notification: ${time}s (syncing local time)`);
     setSessionTime(time);
+  }, []);
+
+  // Start timer
+  const start = useCallback(() => {
+    setIsRunning(true);
+  }, []);
+
+  // Stop timer
+  const stop = useCallback(() => {
+    setIsRunning(false);
   }, []);
 
   // Set time directly
@@ -63,25 +83,49 @@ export function useSessionTimer(config: SessionTimerConfig): SessionTimerResult 
     setSessionTime(time);
   }, []);
 
-  // Subscribe to session time notifications
+  // Local timer - increment every second for smooth UI
   useEffect(() => {
-    if (!autoStart || !onSubscribe) {
+    if (!isRunning) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
       return;
     }
 
-    console.log('[SessionTimer] Subscribing to notifications...');
+    timerRef.current = setInterval(() => {
+      setSessionTime(prev => prev + 1);
+    }, 1000);
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [isRunning]);
+
+  // Subscribe to device notifications for periodic sync
+  useEffect(() => {
+    if (!onSubscribe) {
+      return;
+    }
+
+    console.log('[SessionTimer] Subscribing to device notifications (syncs every 60s)...');
     const unsubscribe = onSubscribe(handleTimeUpdate);
 
     return () => {
       console.log('[SessionTimer] Unsubscribing from notifications...');
       unsubscribe();
     };
-  }, [autoStart, onSubscribe, handleTimeUpdate]);
+  }, [onSubscribe, handleTimeUpdate]);
 
   return {
     sessionTime,
     sessionDuration,
     progress,
+    isRunning,
+    start,
+    stop,
     setTime,
   };
 }

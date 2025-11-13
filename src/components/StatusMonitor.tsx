@@ -59,6 +59,9 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
   useEffect(() => {
     if (connected) {
       loadInitialConfig();
+    } else {
+      // Stop timer when disconnected
+      sessionTimer.stop();
     }
   }, [connected]);
 
@@ -83,8 +86,11 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
       sessionTimer.setTime(config.sessionTime);
       battery.setBatteryLevel(config.batteryLevel);
 
+      // Start the local timer now that we have initial values
+      sessionTimer.start();
+
       console.log('✅ BLE notify mode active:');
-      console.log('  - Session time: real-time notifications');
+      console.log('  - Session time: local counter + device sync every 60s');
       console.log('  - Battery level: real-time notifications');
     } catch (error) {
       console.error('Failed to load status config:', error);
