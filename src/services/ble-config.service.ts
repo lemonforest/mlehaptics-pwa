@@ -44,24 +44,24 @@ export const MOTOR_MODE_LABELS = {
   [MotorMode.MODE_CUSTOM]: 'Custom',
 };
 
-// LED Color Palette (16 colors from firmware)
+// LED Color Palette (16 colors from firmware - AD033 standard)
 export const COLOR_PALETTE = [
-  { name: 'Red', rgb: [255, 0, 0] },
-  { name: 'Green', rgb: [0, 255, 0] },
-  { name: 'Blue', rgb: [0, 0, 255] },
-  { name: 'Yellow', rgb: [255, 255, 0] },
-  { name: 'Cyan', rgb: [0, 255, 255] },
-  { name: 'Magenta', rgb: [255, 0, 255] },
-  { name: 'White', rgb: [255, 255, 255] },
-  { name: 'Orange', rgb: [255, 165, 0] },
-  { name: 'Purple', rgb: [128, 0, 128] },
-  { name: 'Pink', rgb: [255, 192, 203] },
-  { name: 'Lime', rgb: [0, 255, 0] },
-  { name: 'Indigo', rgb: [75, 0, 130] },
-  { name: 'Teal', rgb: [0, 128, 128] },
-  { name: 'Gold', rgb: [255, 215, 0] },
-  { name: 'Silver', rgb: [192, 192, 192] },
-  { name: 'Coral', rgb: [255, 127, 80] },
+  { name: 'Red', rgb: [255, 0, 0] },           // 0: Primary
+  { name: 'Green', rgb: [0, 255, 0] },         // 1: Primary
+  { name: 'Blue', rgb: [0, 0, 255] },          // 2: Primary
+  { name: 'Yellow', rgb: [255, 255, 0] },      // 3: Secondary
+  { name: 'Cyan', rgb: [0, 255, 255] },        // 4: Secondary
+  { name: 'Magenta', rgb: [255, 0, 255] },     // 5: Secondary
+  { name: 'Orange', rgb: [255, 128, 0] },      // 6: Warm tone
+  { name: 'Purple', rgb: [128, 0, 255] },      // 7: Cool tone
+  { name: 'Spring Green', rgb: [0, 255, 128] }, // 8: Nature
+  { name: 'Pink', rgb: [255, 192, 203] },      // 9: Soft
+  { name: 'White', rgb: [255, 255, 255] },     // 10: Neutral
+  { name: 'Olive', rgb: [128, 128, 0] },       // 11: Earth tone
+  { name: 'Teal', rgb: [0, 128, 128] },        // 12: Cool tone
+  { name: 'Violet', rgb: [128, 0, 128] },      // 13: Cool tone
+  { name: 'Turquoise', rgb: [64, 224, 208] },  // 14: Cool tone
+  { name: 'Dark Orange', rgb: [255, 140, 0] }, // 15: Warm tone
 ];
 
 export interface DeviceConfig {
