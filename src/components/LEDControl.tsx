@@ -30,6 +30,21 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected }) => {
   useEffect(() => {
     if (connected) {
       loadConfig();
+
+      // Subscribe to config changes (e.g., when presets are loaded)
+      const unsubscribeConfig = bleConfigService.onConfigChange((config) => {
+        console.log('Config changed, updating LED control:', config);
+        setLEDEnable(config.ledEnable);
+        setColorMode(config.ledColorMode);
+        setPaletteIndex(config.ledPaletteIndex);
+        setCustomRGB(config.ledCustomRGB);
+        setBrightness(config.ledBrightness);
+      });
+
+      // Cleanup subscription on disconnect
+      return () => {
+        unsubscribeConfig();
+      };
     }
   }, [connected]);
 

@@ -99,6 +99,7 @@ export class BLEConfigService {
   private listeners: Map<string, Set<(value: any) => void>> = new Map();
   private cachedConfig: DeviceConfig | null = null;
   private autoNotificationsEnabled: boolean = true;
+  private configChangeListeners: Set<(config: DeviceConfig) => void> = new Set();
 
   // Track event listeners for proper cleanup
   private characteristicEventListeners: Map<string, (event: Event) => void> = new Map();
@@ -254,6 +255,7 @@ export class BLEConfigService {
     this.characteristicsWithNotifications.clear();
     this.characteristicEventListeners.clear();
     this.disconnectHandler = null;
+    this.configChangeListeners.clear();
   }
 
   isConnected(): boolean {
@@ -375,6 +377,20 @@ export class BLEConfigService {
     };
   }
 
+  /**
+   * Subscribe to config changes (e.g., when presets are loaded)
+   * @param callback Function to call when config is updated
+   * @returns Unsubscribe function
+   */
+  onConfigChange(callback: (config: DeviceConfig) => void): () => void {
+    this.configChangeListeners.add(callback);
+
+    // Return unsubscribe function
+    return () => {
+      this.configChangeListeners.delete(callback);
+    };
+  }
+
   // Read operations
   async readUint8(charKey: string): Promise<number> {
     const char = this.characteristics.get(charKey);
@@ -461,6 +477,10 @@ export class BLEConfigService {
     };
     // Update cache
     this.cachedConfig = config;
+
+    // Notify all config change listeners
+    this.configChangeListeners.forEach(listener => listener(config));
+
     return config;
   }
 

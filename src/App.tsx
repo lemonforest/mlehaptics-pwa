@@ -134,9 +134,11 @@ function App() {
           <IconButton color="inherit" onClick={() => setPresetDialogOpen(true)} disabled={!bluetoothAvailable} title="Presets">
             <BookmarkIcon />
           </IconButton>
-          <IconButton color="inherit" onClick={handleAdvancedScan} disabled={!bluetoothAvailable} title="Scan Options">
-            <SettingsIcon />
-          </IconButton>
+          {!connected && (
+            <IconButton color="inherit" onClick={handleAdvancedScan} disabled={!bluetoothAvailable} title="Scan Options">
+              <SettingsIcon />
+            </IconButton>
+          )}
           <Button
             color="inherit"
             onClick={connected ? handleDisconnect : handleQuickConnect}

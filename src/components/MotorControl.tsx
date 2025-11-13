@@ -28,14 +28,24 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected }) => {
       loadConfig();
 
       // Subscribe to MODE notifications to detect changes from device button
-      const unsubscribe = bleConfigService.subscribe('MODE', (newMode: MotorMode) => {
+      const unsubscribeMode = bleConfigService.subscribe('MODE', (newMode: MotorMode) => {
         console.log('MODE changed on device:', newMode);
         setMode(newMode);
       });
 
-      // Cleanup subscription on disconnect
+      // Subscribe to config changes (e.g., when presets are loaded)
+      const unsubscribeConfig = bleConfigService.onConfigChange((config) => {
+        console.log('Config changed, updating motor control:', config);
+        setMode(config.mode);
+        setCustomFrequency(config.customFrequency);
+        setCustomDutyCycle(config.customDutyCycle);
+        setPWMIntensity(config.pwmIntensity);
+      });
+
+      // Cleanup subscriptions on disconnect
       return () => {
-        unsubscribe();
+        unsubscribeMode();
+        unsubscribeConfig();
       };
     }
   }, [connected]);
