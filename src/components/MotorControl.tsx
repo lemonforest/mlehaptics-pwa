@@ -63,8 +63,29 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected }) => {
     }
   };
 
+  // Helper functions for logarithmic frequency scaling
+  const freqToSliderValue = (freq: number): number => {
+    // Map frequency (25-200) to slider position (0-100) logarithmically
+    const minFreq = 25;  // 0.25 Hz × 100
+    const maxFreq = 200; // 2.0 Hz × 100
+    const minLog = Math.log2(minFreq);
+    const maxLog = Math.log2(maxFreq);
+    return ((Math.log2(freq) - minLog) / (maxLog - minLog)) * 100;
+  };
+
+  const sliderValueToFreq = (sliderValue: number): number => {
+    // Map slider position (0-100) to frequency (25-200) logarithmically
+    const minFreq = 25;  // 0.25 Hz × 100
+    const maxFreq = 200; // 2.0 Hz × 100
+    const minLog = Math.log2(minFreq);
+    const maxLog = Math.log2(maxFreq);
+    const freq = Math.pow(2, minLog + (sliderValue / 100) * (maxLog - minLog));
+    return Math.round(freq);
+  };
+
   const handleFrequencyChange = async (_: Event, value: number | number[]) => {
-    const freq = value as number;
+    const sliderValue = value as number;
+    const freq = sliderValueToFreq(sliderValue);
     setCustomFrequency(freq);
     if (connected) {
       try {
@@ -132,19 +153,20 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected }) => {
                 </Typography>
                 <Box sx={{ px: 2, py: 3 }}>
                   <Slider
-                    value={customFrequency}
+                    value={freqToSliderValue(customFrequency)}
                     onChange={handleFrequencyChange}
-                    min={25}
-                    max={200}
-                    step={1}
+                    min={0}
+                    max={100}
+                    step={0.1}
                     marks={[
-                      { value: 25, label: '0.25 Hz' },
-                      { value: 100, label: '1.0 Hz' },
-                      { value: 200, label: '2.0 Hz' },
+                      { value: freqToSliderValue(25), label: '0.25 Hz' },
+                      { value: freqToSliderValue(50), label: '0.5 Hz' },
+                      { value: freqToSliderValue(100), label: '1.0 Hz' },
+                      { value: freqToSliderValue(200), label: '2.0 Hz' },
                     ]}
                     disabled={!connected}
                     valueLabelDisplay="auto"
-                    valueLabelFormat={(value) => `${(value / 100).toFixed(2)} Hz`}
+                    valueLabelFormat={(value) => `${(sliderValueToFreq(value) / 100).toFixed(2)} Hz`}
                     sx={{ touchAction: 'none' }}
                   />
                 </Box>
