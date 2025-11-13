@@ -22,10 +22,13 @@ import BluetoothConnectedIcon from '@mui/icons-material/BluetoothConnected';
 import BluetoothDisabledIcon from '@mui/icons-material/BluetoothDisabled';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SettingsIcon from '@mui/icons-material/Settings';
+import BookmarkIcon from '@mui/icons-material/Bookmark';
 import { MotorControl } from './components/MotorControl';
 import { LEDControl } from './components/LEDControl';
 import { StatusMonitor } from './components/StatusMonitor';
+import { PresetManager } from './components/PresetManager';
 import { bleConfigService, ScanOptions } from './services/ble-config.service';
+import { presetStorageService } from './services/preset-storage.service';
 
 function App() {
   const [connected, setConnected] = useState(false);
@@ -39,6 +42,9 @@ function App() {
   const [namePrefix, setNamePrefix] = useState<string>('');
   const [acceptAllDevices, setAcceptAllDevices] = useState(false);
 
+  // Preset manager state
+  const [presetDialogOpen, setPresetDialogOpen] = useState(false);
+
   // Format build date for display
   const formatBuildDate = (isoDate: string) => {
     const date = new Date(isoDate);
@@ -51,6 +57,9 @@ function App() {
       setBluetoothAvailable(false);
       setError('Web Bluetooth is not supported in this browser. Please use Chrome, Edge, or Opera.');
     }
+
+    // Initialize preset storage with default presets
+    presetStorageService.initialize();
   }, []);
 
   const handleConnect = async (scanOptions?: ScanOptions) => {
@@ -140,6 +149,9 @@ function App() {
               <RefreshIcon />
             </IconButton>
           )}
+          <IconButton color="inherit" onClick={() => setPresetDialogOpen(true)} disabled={!bluetoothAvailable} title="Presets">
+            <BookmarkIcon />
+          </IconButton>
           {!connected && (
             <IconButton color="inherit" onClick={handleAdvancedScan} disabled={!bluetoothAvailable}>
               <SettingsIcon />
@@ -226,6 +238,13 @@ function App() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Preset Manager Dialog */}
+      <PresetManager
+        open={presetDialogOpen}
+        onClose={() => setPresetDialogOpen(false)}
+        connected={connected}
+      />
 
       <Container
         maxWidth="md"
