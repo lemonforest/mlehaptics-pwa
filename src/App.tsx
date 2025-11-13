@@ -67,7 +67,7 @@ function App() {
       const options = scanOptions || {
         namePrefix: namePrefix || undefined,
         acceptAllDevices: acceptAllDevices,
-        disableAutoNotifications: true, // Use polling mode to reduce BLE traffic
+        disableAutoNotifications: false, // Use notify/subscribe for real-time updates
       };
       await bleConfigService.connect(options);
       setConnected(true);
@@ -83,7 +83,7 @@ function App() {
 
   const handleQuickConnect = () => {
     // Quick connect with default options (service UUID filter only)
-    handleConnect({ disableAutoNotifications: true });
+    handleConnect({ disableAutoNotifications: false });
   };
 
   const handleAdvancedScan = () => {

@@ -29,31 +29,29 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
   const [initialSessionTime, setInitialSessionTime] = useState(0);
   const [initialBatteryLevel, setInitialBatteryLevel] = useState(100);
 
-  // Sync function for session timer
-  const syncSessionTime = useCallback(async () => {
-    if (!connected) return 0;
-    return await bleConfigService.readSessionTime();
+  // Subscribe function for session timer notifications
+  const subscribeSessionTime = useCallback((callback: (time: number) => void) => {
+    if (!connected) return () => {};
+    return bleConfigService.subscribe('SESSION_TIME', callback);
   }, [connected]);
 
-  // Read function for battery level
-  const readBatteryLevel = useCallback(async () => {
-    if (!connected) return 100;
-    return await bleConfigService.readBatteryLevel();
+  // Subscribe function for battery level notifications
+  const subscribeBatteryLevel = useCallback((callback: (level: number) => void) => {
+    if (!connected) return () => {};
+    return bleConfigService.subscribe('BATTERY_LEVEL', callback);
   }, [connected]);
 
-  // Use custom hooks for optimized polling
+  // Use custom hooks with BLE notifications
   const sessionTimer = useSessionTimer({
     initialTime: initialSessionTime,
     duration: sessionDuration,
-    onSync: syncSessionTime,
-    syncInterval: 30000, // Sync every 30 seconds
+    onSubscribe: subscribeSessionTime,
     autoStart: false, // Will start manually after loading config
   });
 
   const battery = useBatteryLevel({
     initialLevel: initialBatteryLevel,
-    onRead: readBatteryLevel,
-    pollInterval: 30000, // Poll every 30 seconds
+    onSubscribe: subscribeBatteryLevel,
     autoStart: false, // Will start manually after loading config
   });
 
@@ -61,9 +59,6 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
   useEffect(() => {
     if (connected) {
       loadInitialConfig();
-    } else {
-      // Stop timers when disconnected
-      sessionTimer.stop();
     }
   }, [connected]);
 
@@ -88,12 +83,9 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
       sessionTimer.setTime(config.sessionTime);
       battery.setBatteryLevel(config.batteryLevel);
 
-      // Start the timers now that we have initial values
-      sessionTimer.start();
-
-      console.log('✅ Optimized polling mode active:');
-      console.log('  - Session time: local counter with 30s device sync');
-      console.log('  - Battery level: reads every 30s');
+      console.log('✅ BLE notify mode active:');
+      console.log('  - Session time: real-time notifications');
+      console.log('  - Battery level: real-time notifications');
     } catch (error) {
       console.error('Failed to load status config:', error);
       alert('Warning: Failed to read device status.');

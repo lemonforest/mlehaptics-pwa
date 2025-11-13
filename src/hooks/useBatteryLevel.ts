@@ -1,13 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 export interface BatteryLevelConfig {
   /** Initial battery level (0-100) */
   initialLevel: number;
-  /** Callback to read battery level from device */
-  onRead?: () => Promise<number>;
-  /** Polling interval in milliseconds (default: 30000 = 30 seconds) */
-  pollInterval?: number;
-  /** Whether to start polling automatically */
+  /** Callback to subscribe to battery level notifications from device */
+  onSubscribe?: (callback: (level: number) => void) => (() => void);
+  /** Whether to start subscription automatically */
   autoStart?: boolean;
 }
 
@@ -18,18 +16,15 @@ export interface BatteryLevelResult {
   isLow: boolean;
   /** Battery status color for UI */
   color: 'success' | 'warning' | 'error';
-  /** Manually read battery from device */
-  readBattery: () => Promise<void>;
   /** Set battery level directly */
   setBatteryLevel: (level: number) => void;
 }
 
 /**
- * Custom hook for battery level tracking with periodic polling.
+ * Custom hook for battery level tracking with BLE notifications.
  *
- * This hook reduces BLE traffic by:
- * 1. Polling the device at a configurable interval (default: every 30 seconds)
- * 2. Avoiding continuous BLE notifications for battery level
+ * This hook uses the device's BLE notify characteristic to receive
+ * real-time battery level updates instead of polling.
  *
  * @param config - Configuration for battery level tracking
  * @returns Battery level state and controls
@@ -37,65 +32,42 @@ export interface BatteryLevelResult {
 export function useBatteryLevel(config: BatteryLevelConfig): BatteryLevelResult {
   const {
     initialLevel,
-    onRead,
-    pollInterval = 30000, // 30 seconds default
+    onSubscribe,
     autoStart = true,
   } = config;
 
   const [batteryLevel, setBatteryLevel] = useState(initialLevel);
-  const pollTimerRef = useRef<number | null>(null);
-  const lastReadRef = useRef<number>(Date.now());
 
   // Calculate battery status
   const isLow = batteryLevel < 20;
   const color: 'success' | 'warning' | 'error' =
     batteryLevel > 50 ? 'success' : batteryLevel > 25 ? 'warning' : 'error';
 
-  // Read battery level from device
-  const readBattery = useCallback(async () => {
-    if (!onRead) return;
+  // Handle battery level updates
+  const handleBatteryUpdate = useCallback((level: number) => {
+    console.log(`[BatteryLevel] Notification received: ${level}%`);
+    setBatteryLevel(level);
+  }, []);
 
-    try {
-      console.log('[BatteryLevel] Reading from device...');
-      const level = await onRead();
-      setBatteryLevel(level);
-      lastReadRef.current = Date.now();
-      console.log(`[BatteryLevel] Read: ${level}%`);
-    } catch (error) {
-      console.error('[BatteryLevel] Read failed:', error);
-    }
-  }, [onRead]);
-
-  // Periodic polling
+  // Subscribe to battery level notifications
   useEffect(() => {
-    if (!autoStart || !onRead) {
-      if (pollTimerRef.current) {
-        clearInterval(pollTimerRef.current);
-        pollTimerRef.current = null;
-      }
+    if (!autoStart || !onSubscribe) {
       return;
     }
 
-    // Initial read
-    readBattery();
-
-    // Poll periodically
-    pollTimerRef.current = setInterval(() => {
-      readBattery();
-    }, pollInterval);
+    console.log('[BatteryLevel] Subscribing to notifications...');
+    const unsubscribe = onSubscribe(handleBatteryUpdate);
 
     return () => {
-      if (pollTimerRef.current) {
-        clearInterval(pollTimerRef.current);
-      }
+      console.log('[BatteryLevel] Unsubscribing from notifications...');
+      unsubscribe();
     };
-  }, [autoStart, onRead, pollInterval, readBattery]);
+  }, [autoStart, onSubscribe, handleBatteryUpdate]);
 
   return {
     batteryLevel,
     isLow,
     color,
-    readBattery,
     setBatteryLevel,
   };
 }
