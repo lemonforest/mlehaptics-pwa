@@ -1,30 +1,35 @@
 /**
  * BLE Configuration Service for MLEHaptics
  * Implements AD032: BLE Configuration Service Architecture
+ *
+ * Updated November 14, 2025: New project-specific UUIDs to avoid Nordic UART Service collision
+ * Base UUID: 4BCAE9BE-9829-4F0A-9E88-267DE5E7XXYY
+ *   XX = Service type (02 for Configuration Service)
+ *   YY = Characteristic ID (01-0C for 12 characteristics)
  */
 
-// Service UUID (13th byte = 02 for Configuration Service)
-export const CONFIG_SERVICE_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+// Service UUID (XX byte = 02 for Configuration Service, YY = 00)
+export const CONFIG_SERVICE_UUID = '4bcae9be-9829-4f0a-9e88-267de5e70200';
 
-// Characteristic UUIDs (14th byte increments)
+// Characteristic UUIDs (YY byte increments: 01, 02, 03... 0C)
 export const CHARACTERISTICS = {
   // MOTOR CONTROL GROUP
-  MODE: '6e400102-b5a3-f393-e0a9-e50e24dcca9e',
-  CUSTOM_FREQUENCY: '6e400202-b5a3-f393-e0a9-e50e24dcca9e',
-  CUSTOM_DUTY_CYCLE: '6e400302-b5a3-f393-e0a9-e50e24dcca9e',
-  PWM_INTENSITY: '6e400402-b5a3-f393-e0a9-e50e24dcca9e',
+  MODE: '4bcae9be-9829-4f0a-9e88-267de5e70201',
+  CUSTOM_FREQUENCY: '4bcae9be-9829-4f0a-9e88-267de5e70202',
+  CUSTOM_DUTY_CYCLE: '4bcae9be-9829-4f0a-9e88-267de5e70203',
+  PWM_INTENSITY: '4bcae9be-9829-4f0a-9e88-267de5e70204',
 
   // LED CONTROL GROUP
-  LED_ENABLE: '6e400502-b5a3-f393-e0a9-e50e24dcca9e',
-  LED_COLOR_MODE: '6e400602-b5a3-f393-e0a9-e50e24dcca9e',
-  LED_PALETTE_INDEX: '6e400702-b5a3-f393-e0a9-e50e24dcca9e',
-  LED_CUSTOM_RGB: '6e400802-b5a3-f393-e0a9-e50e24dcca9e',
-  LED_BRIGHTNESS: '6e400902-b5a3-f393-e0a9-e50e24dcca9e',
+  LED_ENABLE: '4bcae9be-9829-4f0a-9e88-267de5e70205',
+  LED_COLOR_MODE: '4bcae9be-9829-4f0a-9e88-267de5e70206',
+  LED_PALETTE_INDEX: '4bcae9be-9829-4f0a-9e88-267de5e70207',
+  LED_CUSTOM_RGB: '4bcae9be-9829-4f0a-9e88-267de5e70208',
+  LED_BRIGHTNESS: '4bcae9be-9829-4f0a-9e88-267de5e70209',
 
   // STATUS/MONITORING GROUP
-  SESSION_DURATION: '6e400a02-b5a3-f393-e0a9-e50e24dcca9e',
-  SESSION_TIME: '6e400b02-b5a3-f393-e0a9-e50e24dcca9e',
-  BATTERY_LEVEL: '6e400c02-b5a3-f393-e0a9-e50e24dcca9e',
+  SESSION_DURATION: '4bcae9be-9829-4f0a-9e88-267de5e7020a',
+  SESSION_TIME: '4bcae9be-9829-4f0a-9e88-267de5e7020b',
+  BATTERY_LEVEL: '4bcae9be-9829-4f0a-9e88-267de5e7020c',
 } as const;
 
 // Motor modes (AD032)

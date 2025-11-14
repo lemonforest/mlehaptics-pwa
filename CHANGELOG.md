@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2025-11-14
+
+### Changed - BREAKING
+- **CRITICAL**: Updated BLE Configuration Service UUIDs to avoid Nordic UART Service collision (AD032 Phase 1b update)
+- Service UUID changed from `6E400002-B5A3-...` to `4BCAE9BE-9829-4F0A-9E88-267DE5E70200`
+- All 12 characteristic UUIDs updated to use new project-specific base UUID
+- **Requires firmware v0.1.2+** (pre-release) with matching UUID scheme
+
+### Added
+- Updated local architecture documentation cache (AD035: Battery-Based Initial Role Assignment)
+- Comprehensive UUID scheme documentation in code comments
+
+### Migration Notes
+- This version **only works** with firmware implementing the new UUID scheme (v0.1.2+ pre-release)
+- Devices with older firmware (using 6E400002-... UUIDs) will not be discoverable
+- For older firmware, use PWA v1.5.1 or earlier
+
+### Firmware Compatibility
+- PWA v2.0.0 ↔ Firmware v0.1.2+ (new project-specific UUIDs: 4BCAE9BE-...)
+- PWA v1.5.1 ↔ Firmware v0.1.0-v0.1.1 (old Nordic UART UUIDs: 6E400002-...)
+
 ## [1.5.1] - 2025-01-14
 
 ### Fixed
