@@ -69,7 +69,7 @@ Web Bluetooth API is required. Supported browsers:
 
 ### Device Requirements
 
-- MLEHaptics device with Configuration Service (UUID: `6E400002-B5A3-F393-E0A9-E50E24DCCA9E`)
+- MLEHaptics device with Configuration Service (UUID: `4BCAE9BE-9829-4F0A-9E88-267DE5E70200`)
 - Bluetooth Low Energy (BLE) support
 - Device must advertise the Configuration Service
 
@@ -184,25 +184,28 @@ For more control over device discovery, click the **Settings icon (⚙️)** nex
 The app implements AD032's Configuration Service with all 12 characteristics:
 
 ```typescript
-Service UUID: 6E400002-B5A3-F393-E0A9-E50E24DCCA9E
+Service UUID: 4BCAE9BE-9829-4F0A-9E88-267DE5E70200
+
+Base UUID: 4BCAE9BE-9829-4F0A-9E88-267DE5E702YY
+  (YY = characteristic ID: 01-0C)
 
 Motor Control (4 characteristics):
-- 6E400102: Mode (uint8, R/W)
-- 6E400202: Custom Frequency (uint16, R/W)
-- 6E400302: Custom Duty Cycle (uint8, R/W)
-- 6E400402: PWM Intensity (uint8, R/W)
+- ...70201: Mode (uint8, R/W)
+- ...70202: Custom Frequency (uint16, R/W)
+- ...70203: Custom Duty Cycle (uint8, R/W)
+- ...70204: PWM Intensity (uint8, R/W)
 
 LED Control (5 characteristics):
-- 6E400502: LED Enable (uint8, R/W)
-- 6E400602: LED Color Mode (uint8, R/W)
-- 6E400702: LED Palette Index (uint8, R/W)
-- 6E400802: LED Custom RGB (uint8[3], R/W)
-- 6E400902: LED Brightness (uint8, R/W)
+- ...70205: LED Enable (uint8, R/W)
+- ...70206: LED Color Mode (uint8, R/W)
+- ...70207: LED Palette Index (uint8, R/W)
+- ...70208: LED Custom RGB (uint8[3], R/W)
+- ...70209: LED Brightness (uint8, R/W)
 
 Status/Monitoring (3 characteristics):
-- 6E400A02: Session Duration (uint32, R/W)
-- 6E400B02: Session Time (uint32, R/Notify)
-- 6E400C02: Battery Level (uint8, R/Notify)
+- ...7020A: Session Duration (uint32, R/W)
+- ...7020B: Session Time (uint32, R/Notify)
+- ...7020C: Battery Level (uint8, R/Notify)
 ```
 
 ### PWA Features
