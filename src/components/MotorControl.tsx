@@ -15,9 +15,10 @@ import { MotorMode, MOTOR_MODE_LABELS, bleConfigService } from '../services/ble-
 
 interface MotorControlProps {
   connected: boolean;
+  onModeChange?: (mode: MotorMode) => void;
 }
 
-export const MotorControl: React.FC<MotorControlProps> = ({ connected }) => {
+export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeChange }) => {
   const [mode, setMode] = useState<MotorMode>(MotorMode.MODE_1HZ_50);
   const [customFrequency, setCustomFrequency] = useState(100); // 1.00 Hz
   const [customDutyCycle, setCustomDutyCycle] = useState(50);
@@ -31,6 +32,7 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected }) => {
       const unsubscribeMode = bleConfigService.subscribe('MODE', (newMode: MotorMode) => {
         console.log('MODE changed on device:', newMode);
         setMode(newMode);
+        onModeChange?.(newMode);
       });
 
       // Subscribe to config changes (e.g., when presets are loaded)
@@ -40,6 +42,7 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected }) => {
         setCustomFrequency(config.customFrequency);
         setCustomDutyCycle(config.customDutyCycle);
         setPWMIntensity(config.pwmIntensity);
+        onModeChange?.(config.mode);
       });
 
       // Cleanup subscriptions on disconnect
@@ -67,6 +70,7 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected }) => {
       setCustomFrequency(config.customFrequency);
       setCustomDutyCycle(config.customDutyCycle);
       setPWMIntensity(config.pwmIntensity);
+      onModeChange?.(config.mode);
     } catch (error) {
       console.error('Failed to load motor config:', error);
       alert('Warning: Failed to read motor configuration from device.');
@@ -75,6 +79,7 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected }) => {
 
   const handleModeChange = async (newMode: MotorMode) => {
     setMode(newMode);
+    onModeChange?.(newMode);
     if (connected) {
       try {
         await bleConfigService.setMotorMode(newMode);

@@ -26,7 +26,7 @@ import { MotorControl } from './components/MotorControl';
 import { LEDControl } from './components/LEDControl';
 import { StatusMonitor } from './components/StatusMonitor';
 import { PresetManager } from './components/PresetManager';
-import { bleConfigService, ScanOptions } from './services/ble-config.service';
+import { bleConfigService, ScanOptions, MotorMode } from './services/ble-config.service';
 import { presetStorageService } from './services/preset-storage.service';
 
 function App() {
@@ -35,6 +35,7 @@ function App() {
   const [error, setError] = useState<string>('');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [bluetoothAvailable, setBluetoothAvailable] = useState(true);
+  const [motorMode, setMotorMode] = useState<MotorMode>(MotorMode.MODE_1HZ_50);
 
   // Scan options state
   const [scanDialogOpen, setScanDialogOpen] = useState(false);
@@ -276,8 +277,8 @@ function App() {
         )}
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <MotorControl connected={connected} />
-          <LEDControl connected={connected} />
+          <MotorControl connected={connected} onModeChange={setMotorMode} />
+          <LEDControl connected={connected} motorMode={motorMode} />
           <StatusMonitor connected={connected} />
         </Box>
 
