@@ -39,6 +39,14 @@ This PWA implements the complete BLE Configuration Service architecture as defin
 - **Battery Monitoring**: Real-time battery level (0-100%) with alerts
 - **Auto-save**: All settings persist to device NVS storage
 
+#### Preset Management
+- **Save Configurations**: Capture current device settings as named presets
+- **Quick Load**: Instantly restore saved configurations to device
+- **Import/Export**: Share presets via JSON files for backup and collaboration
+- **Default Presets**: 3 built-in presets (Standard, Gentle, Intense)
+- **Local Storage**: Presets saved in browser localStorage (no cloud required)
+- **Validation**: Automatic validation ensures presets comply with AD032 bounds
+
 ## Technology Stack
 
 - **React 18** - Modern UI framework
@@ -159,6 +167,15 @@ For more control over device discovery, click the **Settings icon (⚙️)** nex
 5. **Automatic Saving**
    - All changes are immediately written to the device
    - Settings persist across device power cycles via NVS storage
+
+6. **Manage Presets** (Optional)
+   - Click the "Presets" button in the app header to open Preset Manager
+   - **Save Current Settings**: Click "Save Preset" and enter a name to capture current device configuration
+   - **Load Preset**: Click the play icon (▶) next to any preset to apply it to the device
+   - **Export Presets**: Click the download icon to save all presets as a JSON file
+   - **Import Presets**: Click the upload icon to load presets from a JSON file
+   - **Delete Preset**: Click the trash icon to remove a preset from your library
+   - **Default Presets**: First-time users get 3 starter presets (Standard, Gentle, Intense)
 
 ## Architecture
 
@@ -290,11 +307,21 @@ TypeScript will check types during build. For manual checking:
 npx tsc --noEmit
 ```
 
-## Related Documentation
+## Documentation
 
-- [AD032: BLE Configuration Service Architecture](https://github.com/lemonforest/mlehaptics/blob/main/docs/architecture_decisions.md#ad032-ble-configuration-service-architecture)
-- [Web Bluetooth API Documentation](https://developer.mozilla.org/en-US/docs/Web/API/Web_Bluetooth_API)
-- [PWA Documentation](https://web.dev/progressive-web-apps/)
+### Project Documentation
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history and release notes
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Deployment instructions and GitHub Pages setup
+- **[CLAUDE.md](CLAUDE.md)** - Guide for AI assistants working with this codebase
+
+### Architecture & Specifications
+- **[AD032: BLE Configuration Service Architecture](https://github.com/lemonforest/mlehaptics/blob/main/docs/architecture_decisions.md#ad032-ble-configuration-service-architecture)** - Complete BLE service specification
+- **[Local AD032 Cache](docs/external/architecture_decisions.md)** - Locally cached copy (updated via `npm run fetch-docs`)
+- **[MLEHaptics Embedded Repo](https://github.com/lemonforest/mlehaptics)** - Device firmware and architecture decisions
+
+### External Resources
+- **[Web Bluetooth API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Bluetooth_API)** - Browser BLE API documentation
+- **[PWA Guide](https://web.dev/progressive-web-apps/)** - Progressive Web App best practices
 
 ## License
 
