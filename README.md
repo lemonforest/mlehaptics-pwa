@@ -16,6 +16,13 @@ Works on Chrome, Edge, or Opera (Android/Desktop). No installation required - ju
 
 ## Features
 
+### Performance & User Experience
+
+- **Optimized BLE Communication**: Sliders send updates only on release (not during dragging) for dramatically improved performance
+- **Visual Feedback**: Loading indicators for all preset operations with progress tracking
+- **Professional UI**: Material-UI components throughout (Snackbar notifications, confirmation dialogs)
+- **Responsive Design**: Smooth, lag-free interactions on mobile and desktop
+
 ### BLE Configuration Service (AD032 Compliant)
 
 This PWA implements the complete BLE Configuration Service architecture as defined in AD032:
