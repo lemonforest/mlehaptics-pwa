@@ -14,6 +14,7 @@ import {
   Button,
   Chip,
   Alert,
+  Snackbar,
 } from '@mui/material';
 import { COLOR_PALETTE, bleConfigService, MotorMode, MOTOR_MODE_LABELS } from '../services/ble-config.service';
 
@@ -28,6 +29,7 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
   const [paletteIndex, setPaletteIndex] = useState(0);
   const [customRGB, setCustomRGB] = useState<[number, number, number]>([255, 0, 0]);
   const [brightness, setBrightness] = useState(20);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '' });
 
   // LED settings are only configurable in Custom mode
   const isCustomMode = motorMode === MotorMode.MODE_CUSTOM;
@@ -79,7 +81,7 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
     } catch (error) {
       console.error('Failed to load LED config:', error);
       // Show error to user instead of silently failing
-      alert('Warning: Failed to read LED state from device. The displayed state may not match the device.');
+      setSnackbar({ open: true, message: 'Warning: Failed to read LED state from device. The displayed state may not match the device.' });
     }
   };
 
@@ -118,11 +120,19 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
     }
   };
 
-  const handleRGBChange = async (channel: 'r' | 'g' | 'b', value: number) => {
+  // Update local state immediately for responsive UI
+  const handleRGBChange = (channel: 'r' | 'g' | 'b', value: number) => {
     const newRGB: [number, number, number] = [...customRGB];
     const index = channel === 'r' ? 0 : channel === 'g' ? 1 : 2;
     newRGB[index] = value;
     setCustomRGB(newRGB);
+  };
+
+  // Send to BLE only when user releases slider
+  const handleRGBCommitted = async (channel: 'r' | 'g' | 'b', value: number) => {
+    const newRGB: [number, number, number] = [...customRGB];
+    const index = channel === 'r' ? 0 : channel === 'g' ? 1 : 2;
+    newRGB[index] = value;
 
     if (connected) {
       try {
@@ -133,9 +143,15 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
     }
   };
 
-  const handleBrightnessChange = async (_: Event, value: number | number[]) => {
+  // Update local state immediately for responsive UI
+  const handleBrightnessChange = (_: Event, value: number | number[]) => {
     const bright = value as number;
     setBrightness(bright);
+  };
+
+  // Send to BLE only when user releases slider
+  const handleBrightnessCommitted = async (_: Event | React.SyntheticEvent, value: number | number[]) => {
+    const bright = value as number;
     if (connected) {
       try {
         await bleConfigService.setLEDBrightness(bright);
@@ -222,6 +238,7 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
                   <Slider
                     value={customRGB[0]}
                     onChange={(_, value) => handleRGBChange('r', value as number)}
+                    onChangeCommitted={(_, value) => handleRGBCommitted('r', value as number)}
                     min={0}
                     max={255}
                     disabled={!connected || !isCustomMode || !ledEnable}
@@ -236,6 +253,7 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
                   <Slider
                     value={customRGB[1]}
                     onChange={(_, value) => handleRGBChange('g', value as number)}
+                    onChangeCommitted={(_, value) => handleRGBCommitted('g', value as number)}
                     min={0}
                     max={255}
                     disabled={!connected || !isCustomMode || !ledEnable}
@@ -250,6 +268,7 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
                   <Slider
                     value={customRGB[2]}
                     onChange={(_, value) => handleRGBChange('b', value as number)}
+                    onChangeCommitted={(_, value) => handleRGBCommitted('b', value as number)}
                     min={0}
                     max={255}
                     disabled={!connected || !isCustomMode || !ledEnable}
@@ -288,6 +307,7 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
               <Slider
                 value={brightness}
                 onChange={handleBrightnessChange}
+                onChangeCommitted={handleBrightnessCommitted}
                 min={10}
                 max={30}
                 step={1}
@@ -308,6 +328,16 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
           </Grid>
         </Grid>
       </CardContent>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity="error" sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Card>
   );
 };

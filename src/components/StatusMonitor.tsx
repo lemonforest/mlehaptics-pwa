@@ -8,6 +8,8 @@ import {
   Grid,
   LinearProgress,
   Chip,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import BatteryFullIcon from '@mui/icons-material/BatteryFull';
 import Battery80Icon from '@mui/icons-material/Battery80';
@@ -24,6 +26,7 @@ interface StatusMonitorProps {
 
 export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
   const [sessionDuration, setSessionDuration] = useState(1200); // 20 min default
+  const [snackbar, setSnackbar] = useState({ open: false, message: '' });
 
   // Initialize with default values
   const [initialSessionTime, setInitialSessionTime] = useState(0);
@@ -94,13 +97,19 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
       console.log('  - Battery level: real-time notifications');
     } catch (error) {
       console.error('Failed to load status config:', error);
-      alert('Warning: Failed to read device status.');
+      setSnackbar({ open: true, message: 'Warning: Failed to read device status.' });
     }
   };
 
-  const handleDurationChange = async (_: Event, value: number | number[]) => {
+  // Update local state immediately for responsive UI
+  const handleDurationChange = (_: Event, value: number | number[]) => {
     const duration = value as number;
     setSessionDuration(duration);
+  };
+
+  // Send to BLE only when user releases slider
+  const handleDurationCommitted = async (_: Event | React.SyntheticEvent, value: number | number[]) => {
+    const duration = value as number;
     if (connected) {
       try {
         await bleConfigService.setSessionDuration(duration);
@@ -139,6 +148,7 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
               <Slider
                 value={sessionDuration}
                 onChange={handleDurationChange}
+                onChangeCommitted={handleDurationCommitted}
                 min={1200}
                 max={5400}
                 step={60}
@@ -224,6 +234,16 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
           )}
         </Grid>
       </CardContent>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity="error" sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Card>
   );
 };
