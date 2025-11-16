@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2025-11-16
+
+### Changed - Performance & UX
+- **Optimized slider BLE communication**: Sliders now send BLE writes only on release (using `onChangeCommitted`) instead of continuously during dragging
+  - Reduced BLE traffic by ~99% during slider adjustments (from 100+ writes to 1 per adjustment)
+  - Dramatically improved performance and responsiveness across all sliders
+  - Affects 8 sliders: Motor (Frequency, Duty Cycle, PWM), LED (RGB, Brightness), Status (Duration)
+- **Replaced browser dialogs with Material-UI components** for consistent design:
+  - `alert()` → Material-UI Snackbar with auto-dismiss (6 seconds) and manual close
+  - `window.confirm()` → Styled Material-UI Dialog for delete confirmations
+  - Non-blocking error notifications that match app aesthetic
+
+### Added
+- **Loading indicators for preset operations**:
+  - Save preset: Spinner on button with "Reading device settings..." message
+  - Load preset: Linear progress bar showing 0-100% as each of 10 BLE writes completes
+  - Individual preset load buttons show spinner during operation
+  - All interactive elements disabled during operations to prevent duplicate actions
+- **Material-UI delete confirmation dialog** for presets:
+  - Preset name highlighted in confirmation text
+  - "This action cannot be undone" warning message
+  - Red "Delete" button for clear destructive action indication
+
+### Technical
+- Added `@types/web-bluetooth` dev dependency for better TypeScript support
+- Split slider handlers into `onChange` (local state) and `onChangeCommitted` (BLE write) for all 8 sliders
+- Added progress tracking state to PresetManager for sequential BLE operations
+- Added Snackbar components to MotorControl, LEDControl, and StatusMonitor
+
+### User Impact
+- **Significantly faster** slider interactions with no lag during dragging
+- **Clear visual feedback** for all preset operations (no more wondering if action succeeded)
+- **Professional UI** with consistent Material-UI dialogs instead of browser alerts
+- **Better mobile experience** with non-blocking notifications
+
 ## [2.0.0] - 2025-11-14
 
 ### Changed - BREAKING
@@ -174,7 +209,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - BLE Configuration Service UUID: `6E400002-B5A3-F393-E0A9-E50E24DCCA9E`
 - 12 BLE characteristics for motor, LED, and session control
 
-[unreleased]: https://github.com/lemonforest/mlehaptics-pwa/compare/v1.5.1...HEAD
+[unreleased]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.0.0...v2.1.0
+[2.0.0]: https://github.com/lemonforest/mlehaptics-pwa/compare/v1.5.1...v2.0.0
 [1.5.1]: https://github.com/lemonforest/mlehaptics-pwa/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/lemonforest/mlehaptics-pwa/compare/v1.4.3...v1.5.0
 [1.4.3]: https://github.com/lemonforest/mlehaptics-pwa/compare/v1.4.2...v1.4.3

@@ -17,6 +17,8 @@ import {
   Alert,
   Divider,
   Snackbar,
+  CircularProgress,
+  LinearProgress,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -42,6 +44,13 @@ export const PresetManager: React.FC<PresetManagerProps> = ({ open, onClose, con
     open: false,
     message: '',
     severity: 'success',
+  });
+  const [isSaving, setIsSaving] = useState(false);
+  const [loadingPresetId, setLoadingPresetId] = useState<string | null>(null);
+  const [loadProgress, setLoadProgress] = useState(0);
+  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{ open: boolean; preset: DevicePreset | null }>({
+    open: false,
+    preset: null,
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -81,6 +90,7 @@ export const PresetManager: React.FC<PresetManagerProps> = ({ open, onClose, con
       return;
     }
 
+    setIsSaving(true);
     try {
       // Read current device config
       const config = await bleConfigService.readConfig();
@@ -108,6 +118,8 @@ export const PresetManager: React.FC<PresetManagerProps> = ({ open, onClose, con
     } catch (error) {
       console.error('Failed to save preset:', error);
       showSnackbar(`Failed to save preset: ${error}`, 'error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -117,6 +129,9 @@ export const PresetManager: React.FC<PresetManagerProps> = ({ open, onClose, con
       return;
     }
 
+    setLoadingPresetId(preset.id);
+    setLoadProgress(0);
+
     try {
       // Validate config before applying
       const validation = presetStorageService.validateConfig(preset.config);
@@ -125,18 +140,39 @@ export const PresetManager: React.FC<PresetManagerProps> = ({ open, onClose, con
         return;
       }
 
-      // Apply all settings to device
+      // Apply all settings to device with progress tracking
       const config = preset.config;
+      const totalSteps = 10;
+
       await bleConfigService.setMotorMode(config.mode);
+      setLoadProgress((1 / totalSteps) * 100);
+
       await bleConfigService.setCustomFrequency(config.customFrequency);
+      setLoadProgress((2 / totalSteps) * 100);
+
       await bleConfigService.setCustomDutyCycle(config.customDutyCycle);
+      setLoadProgress((3 / totalSteps) * 100);
+
       await bleConfigService.setPWMIntensity(config.pwmIntensity);
+      setLoadProgress((4 / totalSteps) * 100);
+
       await bleConfigService.setLEDEnable(config.ledEnable);
+      setLoadProgress((5 / totalSteps) * 100);
+
       await bleConfigService.setLEDColorMode(config.ledColorMode);
+      setLoadProgress((6 / totalSteps) * 100);
+
       await bleConfigService.setLEDPaletteIndex(config.ledPaletteIndex);
+      setLoadProgress((7 / totalSteps) * 100);
+
       await bleConfigService.setLEDCustomRGB(config.ledCustomRGB);
+      setLoadProgress((8 / totalSteps) * 100);
+
       await bleConfigService.setLEDBrightness(config.ledBrightness);
+      setLoadProgress((9 / totalSteps) * 100);
+
       await bleConfigService.setSessionDuration(config.sessionDuration);
+      setLoadProgress(100);
 
       showSnackbar(`Preset "${preset.name}" loaded successfully`, 'success');
 
@@ -149,19 +185,31 @@ export const PresetManager: React.FC<PresetManagerProps> = ({ open, onClose, con
     } catch (error) {
       console.error('Failed to load preset:', error);
       showSnackbar(`Failed to load preset: ${error}`, 'error');
+    } finally {
+      setLoadingPresetId(null);
+      setLoadProgress(0);
     }
   };
 
   const handleDeletePreset = (preset: DevicePreset) => {
-    if (window.confirm(`Are you sure you want to delete preset "${preset.name}"?`)) {
-      const success = presetStorageService.deletePreset(preset.id);
-      if (success) {
-        showSnackbar(`Preset "${preset.name}" deleted`, 'success');
-        loadPresets();
-      } else {
-        showSnackbar('Failed to delete preset', 'error');
-      }
+    setDeleteConfirmDialog({ open: true, preset });
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deleteConfirmDialog.preset) return;
+
+    const success = presetStorageService.deletePreset(deleteConfirmDialog.preset.id);
+    if (success) {
+      showSnackbar(`Preset "${deleteConfirmDialog.preset.name}" deleted`, 'success');
+      loadPresets();
+    } else {
+      showSnackbar('Failed to delete preset', 'error');
     }
+    setDeleteConfirmDialog({ open: false, preset: null });
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteConfirmDialog({ open: false, preset: null });
   };
 
   const handleExportPresets = () => {
@@ -258,6 +306,14 @@ export const PresetManager: React.FC<PresetManagerProps> = ({ open, onClose, con
           </Box>
         </DialogTitle>
         <DialogContent>
+          {loadingPresetId && (
+            <Box sx={{ mb: 2 }}>
+              <LinearProgress variant="determinate" value={loadProgress} />
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                Loading preset... {Math.round(loadProgress)}%
+              </Typography>
+            </Box>
+          )}
           {!connected && (
             <Alert severity="warning" sx={{ mb: 2 }}>
               Connect to a device to save or load presets
@@ -294,15 +350,20 @@ export const PresetManager: React.FC<PresetManagerProps> = ({ open, onClose, con
                       <IconButton
                         edge="end"
                         onClick={() => handleLoadPreset(preset)}
-                        disabled={!connected}
+                        disabled={!connected || loadingPresetId !== null}
                         title="Load Preset"
                         color="primary"
                       >
-                        <PlayArrowIcon />
+                        {loadingPresetId === preset.id ? (
+                          <CircularProgress size={24} />
+                        ) : (
+                          <PlayArrowIcon />
+                        )}
                       </IconButton>
                       <IconButton
                         edge="end"
                         onClick={() => handleDeletePreset(preset)}
+                        disabled={loadingPresetId !== null}
                         title="Delete Preset"
                         sx={{ ml: 1 }}
                       >
@@ -316,12 +377,12 @@ export const PresetManager: React.FC<PresetManagerProps> = ({ open, onClose, con
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose}>Close</Button>
+          <Button onClick={onClose} disabled={loadingPresetId !== null}>Close</Button>
           <Button
             onClick={handleOpenSaveDialog}
             variant="contained"
             startIcon={<SaveIcon />}
-            disabled={!connected}
+            disabled={!connected || loadingPresetId !== null}
           >
             Save Preset
           </Button>
@@ -329,7 +390,7 @@ export const PresetManager: React.FC<PresetManagerProps> = ({ open, onClose, con
       </Dialog>
 
       {/* Save Preset Dialog */}
-      <Dialog open={saveDialogOpen} onClose={() => setSaveDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={saveDialogOpen} onClose={() => !isSaving && setSaveDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Save Current Settings as Preset</DialogTitle>
         <DialogContent>
           <TextField
@@ -341,17 +402,31 @@ export const PresetManager: React.FC<PresetManagerProps> = ({ open, onClose, con
             value={presetName}
             onChange={handleNameChange}
             variant="outlined"
+            disabled={isSaving}
           />
           {overwriteWarning && (
             <Alert severity="warning" sx={{ mt: 2 }}>
               A preset with this name already exists. Saving will overwrite it.
             </Alert>
           )}
+          {isSaving && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
+              <CircularProgress size={20} />
+              <Typography variant="body2" color="text.secondary">
+                Reading device settings...
+              </Typography>
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setSaveDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleSavePreset} variant="contained" disabled={!presetName.trim()}>
-            Save
+          <Button onClick={() => setSaveDialogOpen(false)} disabled={isSaving}>Cancel</Button>
+          <Button
+            onClick={handleSavePreset}
+            variant="contained"
+            disabled={!presetName.trim() || isSaving}
+            startIcon={isSaving ? <CircularProgress size={20} /> : <SaveIcon />}
+          >
+            {isSaving ? 'Saving...' : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -376,6 +451,30 @@ export const PresetManager: React.FC<PresetManagerProps> = ({ open, onClose, con
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteConfirmDialog.open}
+        onClose={handleCancelDelete}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Delete Preset</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete preset <strong>"{deleteConfirmDialog.preset?.name}"</strong>?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelDelete}>Cancel</Button>
+          <Button onClick={handleConfirmDelete} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };

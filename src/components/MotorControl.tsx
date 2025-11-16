@@ -10,6 +10,8 @@ import {
   Slider,
   Grid,
   Box,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import { MotorMode, MOTOR_MODE_LABELS, bleConfigService } from '../services/ble-config.service';
 
@@ -23,6 +25,7 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
   const [customFrequency, setCustomFrequency] = useState(100); // 1.00 Hz
   const [customDutyCycle, setCustomDutyCycle] = useState(50);
   const [pwmIntensity, setPWMIntensity] = useState(75);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '' });
 
   useEffect(() => {
     if (connected) {
@@ -73,7 +76,7 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
       onModeChange?.(config.mode);
     } catch (error) {
       console.error('Failed to load motor config:', error);
-      alert('Warning: Failed to read motor configuration from device.');
+      setSnackbar({ open: true, message: 'Warning: Failed to read motor configuration from device.' });
     }
   };
 
@@ -109,10 +112,17 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
     return Math.round(freq);
   };
 
-  const handleFrequencyChange = async (_: Event, value: number | number[]) => {
+  // Update local state immediately for responsive UI
+  const handleFrequencyChange = (_: Event, value: number | number[]) => {
     const sliderValue = value as number;
     const freq = sliderValueToFreq(sliderValue);
     setCustomFrequency(freq);
+  };
+
+  // Send to BLE only when user releases slider
+  const handleFrequencyCommitted = async (_: Event | React.SyntheticEvent, value: number | number[]) => {
+    const sliderValue = value as number;
+    const freq = sliderValueToFreq(sliderValue);
     if (connected) {
       try {
         await bleConfigService.setCustomFrequency(freq);
@@ -122,9 +132,15 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
     }
   };
 
-  const handleDutyCycleChange = async (_: Event, value: number | number[]) => {
+  // Update local state immediately for responsive UI
+  const handleDutyCycleChange = (_: Event, value: number | number[]) => {
     const duty = value as number;
     setCustomDutyCycle(duty);
+  };
+
+  // Send to BLE only when user releases slider
+  const handleDutyCycleCommitted = async (_: Event | React.SyntheticEvent, value: number | number[]) => {
+    const duty = value as number;
     if (connected) {
       try {
         await bleConfigService.setCustomDutyCycle(duty);
@@ -134,9 +150,15 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
     }
   };
 
-  const handlePWMIntensityChange = async (_: Event, value: number | number[]) => {
+  // Update local state immediately for responsive UI
+  const handlePWMIntensityChange = (_: Event, value: number | number[]) => {
     const intensity = value as number;
     setPWMIntensity(intensity);
+  };
+
+  // Send to BLE only when user releases slider
+  const handlePWMIntensityCommitted = async (_: Event | React.SyntheticEvent, value: number | number[]) => {
+    const intensity = value as number;
     if (connected) {
       try {
         await bleConfigService.setPWMIntensity(intensity);
@@ -181,6 +203,7 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
                   <Slider
                     value={freqToSliderValue(customFrequency)}
                     onChange={handleFrequencyChange}
+                    onChangeCommitted={handleFrequencyCommitted}
                     min={0}
                     max={100}
                     step={0.1}
@@ -206,6 +229,7 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
                   <Slider
                     value={customDutyCycle}
                     onChange={handleDutyCycleChange}
+                    onChangeCommitted={handleDutyCycleCommitted}
                     min={10}
                     max={50}
                     step={1}
@@ -232,6 +256,7 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
               <Slider
                 value={pwmIntensity}
                 onChange={handlePWMIntensityChange}
+                onChangeCommitted={handlePWMIntensityCommitted}
                 min={0}
                 max={80}
                 step={1}
@@ -252,6 +277,16 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
           </Grid>
         </Grid>
       </CardContent>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity="error" sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Card>
   );
 };
