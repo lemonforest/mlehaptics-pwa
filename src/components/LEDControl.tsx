@@ -17,6 +17,7 @@ import {
   Snackbar,
 } from '@mui/material';
 import { COLOR_PALETTE, bleConfigService, MotorMode, MOTOR_MODE_LABELS } from '../services/ble-config.service';
+import { useDebouncedBLESend } from '../hooks/useDebouncedBLESend';
 
 interface LEDControlProps {
   connected: boolean;
@@ -33,6 +34,25 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
 
   // LED settings are only configurable in Custom mode
   const isCustomMode = motorMode === MotorMode.MODE_CUSTOM;
+
+  // Debounced BLE sends for sliders (pause-to-send functionality)
+  const rgbDebounce = useDebouncedBLESend(
+    customRGB,
+    async (rgb) => {
+      if (connected) {
+        await bleConfigService.setLEDCustomRGB(rgb);
+      }
+    }
+  );
+
+  const brightnessDebounce = useDebouncedBLESend(
+    brightness,
+    async (bright) => {
+      if (connected) {
+        await bleConfigService.setLEDBrightness(bright);
+      }
+    }
+  );
 
   useEffect(() => {
     if (connected) {
@@ -130,6 +150,7 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
 
   // Send to BLE only when user releases slider
   const handleRGBCommitted = async (channel: 'r' | 'g' | 'b', value: number) => {
+    rgbDebounce.onInteractionEnd(); // Cancel debounced send
     const newRGB: [number, number, number] = [...customRGB];
     const index = channel === 'r' ? 0 : channel === 'g' ? 1 : 2;
     newRGB[index] = value;
@@ -151,6 +172,7 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
 
   // Send to BLE only when user releases slider
   const handleBrightnessCommitted = async (_: Event | React.SyntheticEvent, value: number | number[]) => {
+    brightnessDebounce.onInteractionEnd(); // Cancel debounced send
     const bright = value as number;
     if (connected) {
       try {
@@ -239,6 +261,8 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
                     value={customRGB[0]}
                     onChange={(_, value) => handleRGBChange('r', value as number)}
                     onChangeCommitted={(_, value) => handleRGBCommitted('r', value as number)}
+                    onMouseDown={rgbDebounce.onInteractionStart}
+                    onTouchStart={rgbDebounce.onInteractionStart}
                     min={0}
                     max={255}
                     disabled={!connected || !isCustomMode || !ledEnable}
@@ -254,6 +278,8 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
                     value={customRGB[1]}
                     onChange={(_, value) => handleRGBChange('g', value as number)}
                     onChangeCommitted={(_, value) => handleRGBCommitted('g', value as number)}
+                    onMouseDown={rgbDebounce.onInteractionStart}
+                    onTouchStart={rgbDebounce.onInteractionStart}
                     min={0}
                     max={255}
                     disabled={!connected || !isCustomMode || !ledEnable}
@@ -269,6 +295,8 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
                     value={customRGB[2]}
                     onChange={(_, value) => handleRGBChange('b', value as number)}
                     onChangeCommitted={(_, value) => handleRGBCommitted('b', value as number)}
+                    onMouseDown={rgbDebounce.onInteractionStart}
+                    onTouchStart={rgbDebounce.onInteractionStart}
                     min={0}
                     max={255}
                     disabled={!connected || !isCustomMode || !ledEnable}
@@ -308,6 +336,8 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
                 value={brightness}
                 onChange={handleBrightnessChange}
                 onChangeCommitted={handleBrightnessCommitted}
+                onMouseDown={brightnessDebounce.onInteractionStart}
+                onTouchStart={brightnessDebounce.onInteractionStart}
                 min={10}
                 max={30}
                 step={1}
