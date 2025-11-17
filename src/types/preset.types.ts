@@ -13,7 +13,7 @@ export interface PresetConfig {
   // Motor Control
   mode: MotorMode;
   customFrequency: number; // Hz × 100 (25-200 = 0.25-2.0 Hz)
-  customDutyCycle: number; // 0-50%
+  customDutyCycle: number; // 10-100%
   pwmIntensity: number; // 30-80%
 
   // LED Control
@@ -42,7 +42,7 @@ export interface DevicePreset {
  */
 export const PRESET_VALIDATION_BOUNDS = {
   customFrequency: { min: 25, max: 200 },
-  customDutyCycle: { min: 0, max: 50 },
+  customDutyCycle: { min: 10, max: 100 },
   pwmIntensity: { min: 30, max: 80 },
   ledColorMode: { min: 0, max: 1 },
   ledPaletteIndex: { min: 0, max: 15 },

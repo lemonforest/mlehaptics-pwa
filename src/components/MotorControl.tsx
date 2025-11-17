@@ -267,12 +267,12 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
                     onMouseDown={dutyCycleDebounce.onInteractionStart}
                     onTouchStart={dutyCycleDebounce.onInteractionStart}
                     min={10}
-                    max={50}
+                    max={100}
                     step={1}
                     marks={[
                       { value: 10, label: '10%' },
-                      { value: 25, label: '25%' },
                       { value: 50, label: '50%' },
+                      { value: 100, label: '100%' },
                     ]}
                     disabled={!connected}
                     valueLabelDisplay="auto"
