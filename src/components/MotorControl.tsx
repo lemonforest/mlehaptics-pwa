@@ -14,6 +14,7 @@ import {
   Alert,
 } from '@mui/material';
 import { MotorMode, MOTOR_MODE_LABELS, bleConfigService } from '../services/ble-config.service';
+import { useDebouncedBLESend } from '../hooks/useDebouncedBLESend';
 
 interface MotorControlProps {
   connected: boolean;
@@ -26,6 +27,34 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
   const [customDutyCycle, setCustomDutyCycle] = useState(50);
   const [pwmIntensity, setPWMIntensity] = useState(75);
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
+
+  // Debounced BLE sends for sliders (pause-to-send functionality)
+  const frequencyDebounce = useDebouncedBLESend(
+    customFrequency,
+    async (freq) => {
+      if (connected) {
+        await bleConfigService.setCustomFrequency(freq);
+      }
+    }
+  );
+
+  const dutyCycleDebounce = useDebouncedBLESend(
+    customDutyCycle,
+    async (duty) => {
+      if (connected) {
+        await bleConfigService.setCustomDutyCycle(duty);
+      }
+    }
+  );
+
+  const pwmIntensityDebounce = useDebouncedBLESend(
+    pwmIntensity,
+    async (intensity) => {
+      if (connected) {
+        await bleConfigService.setPWMIntensity(intensity);
+      }
+    }
+  );
 
   useEffect(() => {
     if (connected) {
@@ -121,6 +150,7 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
 
   // Send to BLE only when user releases slider
   const handleFrequencyCommitted = async (_: Event | React.SyntheticEvent, value: number | number[]) => {
+    frequencyDebounce.onInteractionEnd(); // Cancel debounced send
     const sliderValue = value as number;
     const freq = sliderValueToFreq(sliderValue);
     if (connected) {
@@ -140,6 +170,7 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
 
   // Send to BLE only when user releases slider
   const handleDutyCycleCommitted = async (_: Event | React.SyntheticEvent, value: number | number[]) => {
+    dutyCycleDebounce.onInteractionEnd(); // Cancel debounced send
     const duty = value as number;
     if (connected) {
       try {
@@ -158,6 +189,7 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
 
   // Send to BLE only when user releases slider
   const handlePWMIntensityCommitted = async (_: Event | React.SyntheticEvent, value: number | number[]) => {
+    pwmIntensityDebounce.onInteractionEnd(); // Cancel debounced send
     const intensity = value as number;
     if (connected) {
       try {
@@ -204,6 +236,8 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
                     value={freqToSliderValue(customFrequency)}
                     onChange={handleFrequencyChange}
                     onChangeCommitted={handleFrequencyCommitted}
+                    onMouseDown={frequencyDebounce.onInteractionStart}
+                    onTouchStart={frequencyDebounce.onInteractionStart}
                     min={0}
                     max={100}
                     step={0.1}
@@ -230,13 +264,15 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
                     value={customDutyCycle}
                     onChange={handleDutyCycleChange}
                     onChangeCommitted={handleDutyCycleCommitted}
+                    onMouseDown={dutyCycleDebounce.onInteractionStart}
+                    onTouchStart={dutyCycleDebounce.onInteractionStart}
                     min={10}
-                    max={50}
+                    max={100}
                     step={1}
                     marks={[
                       { value: 10, label: '10%' },
-                      { value: 25, label: '25%' },
                       { value: 50, label: '50%' },
+                      { value: 100, label: '100%' },
                     ]}
                     disabled={!connected}
                     valueLabelDisplay="auto"
@@ -257,6 +293,8 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
                 value={pwmIntensity}
                 onChange={handlePWMIntensityChange}
                 onChangeCommitted={handlePWMIntensityCommitted}
+                onMouseDown={pwmIntensityDebounce.onInteractionStart}
+                onTouchStart={pwmIntensityDebounce.onInteractionStart}
                 min={0}
                 max={80}
                 step={1}

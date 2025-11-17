@@ -1,8 +1,10 @@
 /**
  * Preset Storage Service
  * Manages saving, loading, and validation of device configuration presets
+ * Migrated to use IndexedDB with localStorage fallback
  */
 
+import { indexedDBService, STORE_NAMES } from './indexeddb.service';
 import { MotorMode } from './ble-config.service';
 import {
   DevicePreset,
@@ -11,8 +13,9 @@ import {
   PRESET_VALIDATION_BOUNDS,
 } from '../types/preset.types';
 
-const STORAGE_KEY = 'mlehaptics-device-presets';
+const LEGACY_STORAGE_KEY = 'mlehaptics-device-presets';
 const EXPORT_VERSION = '1.0.0';
+const MIGRATION_FLAG_KEY = 'mlehaptics-presets-migrated';
 
 /**
  * Default presets with safe, tested settings
@@ -66,29 +69,107 @@ const DEFAULT_PRESETS: Omit<DevicePreset, 'id' | 'createdAt'>[] = [
 ];
 
 export class PresetStorageService {
+  private useFallback = false;
+
   /**
-   * Initialize storage with default presets if empty
+   * Initialize storage with migration and default presets
    */
-  initialize(): void {
-    const existing = this.getAllPresets();
-    if (existing.length === 0) {
-      console.log('Initializing default presets...');
-      DEFAULT_PRESETS.forEach((preset) => {
-        this.savePreset(preset.name, preset.config, false);
-      });
+  async initialize(): Promise<void> {
+    try {
+      // Initialize IndexedDB
+      await indexedDBService.init();
+
+      // Migrate from localStorage if needed
+      await this.migrateFromLocalStorage();
+
+      // Load existing presets
+      const existing = await this.getAllPresets();
+      if (existing.length === 0) {
+        console.log('Initializing default presets...');
+        for (const preset of DEFAULT_PRESETS) {
+          await this.savePreset(preset.name, preset.config, false);
+        }
+      }
+    } catch (error) {
+      console.warn('IndexedDB initialization failed, using localStorage fallback:', error);
+      this.useFallback = true;
+
+      // Initialize defaults if empty
+      const existing = await this.getAllPresets();
+      if (existing.length === 0) {
+        console.log('Initializing default presets...');
+        for (const preset of DEFAULT_PRESETS) {
+          await this.savePreset(preset.name, preset.config, false);
+        }
+      }
+    }
+  }
+
+  /**
+   * Migrate presets from localStorage to IndexedDB
+   */
+  private async migrateFromLocalStorage(): Promise<void> {
+    // Check if already migrated
+    const migrated = localStorage.getItem(MIGRATION_FLAG_KEY);
+    if (migrated === 'true') {
+      console.log('Presets already migrated to IndexedDB');
+      return;
+    }
+
+    try {
+      // Load from old localStorage
+      const data = localStorage.getItem(LEGACY_STORAGE_KEY);
+      if (!data) {
+        console.log('No legacy presets to migrate');
+        localStorage.setItem(MIGRATION_FLAG_KEY, 'true');
+        return;
+      }
+
+      const presets = JSON.parse(data) as DevicePreset[];
+      console.log(`Migrating ${presets.length} presets from localStorage to IndexedDB...`);
+
+      // Save each preset to IndexedDB
+      for (const preset of presets) {
+        await indexedDBService.put(STORE_NAMES.DEVICE_PRESETS, preset);
+      }
+
+      // Mark as migrated
+      localStorage.setItem(MIGRATION_FLAG_KEY, 'true');
+      console.log('Migration complete! Legacy localStorage data preserved for backup.');
+    } catch (error) {
+      console.error('Failed to migrate presets:', error);
+      throw error;
     }
   }
 
   /**
    * Get all saved presets
    */
-  getAllPresets(): DevicePreset[] {
+  async getAllPresets(): Promise<DevicePreset[]> {
+    if (this.useFallback) {
+      return this.getAllPresetsFromFallback();
+    }
+
     try {
-      const data = localStorage.getItem(STORAGE_KEY);
+      const presets = await indexedDBService.getAll<DevicePreset>(STORE_NAMES.DEVICE_PRESETS);
+      return presets;
+    } catch (error) {
+      console.error('Failed to load presets from IndexedDB:', error);
+      this.useFallback = true;
+      return this.getAllPresetsFromFallback();
+    }
+  }
+
+  /**
+   * Get all presets from localStorage fallback
+   */
+  private getAllPresetsFromFallback(): DevicePreset[] {
+    try {
+      const data = localStorage.getItem(LEGACY_STORAGE_KEY);
       if (!data) return [];
       return JSON.parse(data) as DevicePreset[];
     } catch (error) {
-      console.error('Failed to load presets:', error);
+      console.error('Failed to load presets from localStorage:', error);
       return [];
     }
   }
@@ -96,8 +177,8 @@ export class PresetStorageService {
   /**
    * Generate auto-incremented preset name with collision detection
    */
-  generatePresetName(): string {
-    const presets = this.getAllPresets();
+  async generatePresetName(): Promise<string> {
+    const presets = await this.getAllPresets();
     const existingNames = new Set(presets.map((p) => p.name));
 
     let counter = 1;
@@ -114,15 +195,15 @@ export class PresetStorageService {
   /**
    * Check if preset name already exists
    */
-  presetExists(name: string): boolean {
-    const presets = this.getAllPresets();
+  async presetExists(name: string): Promise<boolean> {
+    const presets = await this.getAllPresets();
     return presets.some((p) => p.name === name);
   }
 
   /**
    * Save a new preset or update existing
    */
-  savePreset(name: string, config: PresetConfig, validateBounds = true): DevicePreset {
+  async savePreset(name: string, config: PresetConfig, validateBounds = true): Promise<DevicePreset> {
     // Validate config if requested
     if (validateBounds) {
       const validation = this.validateConfig(config);
@@ -131,7 +212,7 @@ export class PresetStorageService {
       }
     }
 
-    const presets = this.getAllPresets();
+    const presets = await this.getAllPresets();
     const existingIndex = presets.findIndex((p) => p.name === name);
 
     const preset: DevicePreset = {
@@ -141,39 +222,73 @@ export class PresetStorageService {
       config,
     };
 
-    if (existingIndex >= 0) {
-      // Update existing preset
-      presets[existingIndex] = preset;
+    if (this.useFallback) {
+      // Update array and save to localStorage
+      if (existingIndex >= 0) {
+        presets[existingIndex] = preset;
+      } else {
+        presets.push(preset);
+      }
+      this.saveToStorageFallback(presets);
     } else {
-      // Add new preset
-      presets.push(preset);
+      // Save directly to IndexedDB (single record)
+      try {
+        await indexedDBService.put(STORE_NAMES.DEVICE_PRESETS, preset);
+      } catch (error) {
+        console.error('Failed to save to IndexedDB, falling back to localStorage:', error);
+        this.useFallback = true;
+        if (existingIndex >= 0) {
+          presets[existingIndex] = preset;
+        } else {
+          presets.push(preset);
+        }
+        this.saveToStorageFallback(presets);
+      }
     }
 
-    this.saveToStorage(presets);
     return preset;
   }
 
   /**
    * Delete a preset by ID
    */
-  deletePreset(id: string): boolean {
-    const presets = this.getAllPresets();
-    const filtered = presets.filter((p) => p.id !== id);
+  async deletePreset(id: string): Promise<boolean> {
+    if (this.useFallback) {
+      const presets = await this.getAllPresets();
+      const filtered = presets.filter((p) => p.id !== id);
 
-    if (filtered.length === presets.length) {
-      return false; // Preset not found
+      if (filtered.length === presets.length) {
+        return false; // Preset not found
+      }
+
+      this.saveToStorageFallback(filtered);
+      return true;
     }
 
-    this.saveToStorage(filtered);
-    return true;
+    try {
+      await indexedDBService.delete(STORE_NAMES.DEVICE_PRESETS, id);
+      return true;
+    } catch (error) {
+      console.error('Failed to delete from IndexedDB:', error);
+      return false;
+    }
   }
 
   /**
    * Get a preset by ID
    */
-  getPreset(id: string): DevicePreset | null {
-    const presets = this.getAllPresets();
-    return presets.find((p) => p.id === id) || null;
+  async getPreset(id: string): Promise<DevicePreset | null> {
+    if (this.useFallback) {
+      const presets = await this.getAllPresets();
+      return presets.find((p) => p.id === id) || null;
+    }
+
+    try {
+      return await indexedDBService.get<DevicePreset>(STORE_NAMES.DEVICE_PRESETS, id);
+    } catch (error) {
+      console.error('Failed to get preset from IndexedDB:', error);
+      return null;
+    }
   }
 
   /**
@@ -266,22 +381,23 @@ export class PresetStorageService {
   /**
    * Export all presets to JSON
    */
-  exportPresets(): PresetExport {
+  async exportPresets(): Promise<PresetExport> {
+    const presets = await this.getAllPresets();
     return {
       version: EXPORT_VERSION,
       exportedAt: Date.now(),
-      presets: this.getAllPresets(),
+      presets,
     };
   }
 
   /**
    * Import presets from JSON with validation
    */
-  importPresets(data: PresetExport, mode: 'merge' | 'replace' = 'merge'): {
+  async importPresets(data: PresetExport, mode: 'merge' | 'replace' = 'merge'): Promise<{
     success: boolean;
     imported: number;
     errors: string[];
-  } {
+  }> {
     const errors: string[] = [];
     let imported = 0;
 
@@ -295,7 +411,7 @@ export class PresetStorageService {
     }
 
     // Get existing presets
-    let existingPresets = mode === 'replace' ? [] : this.getAllPresets();
+    const existingPresets = mode === 'replace' ? [] : await this.getAllPresets();
     const existingNames = new Set(existingPresets.map((p) => p.name));
 
     // Import each preset
@@ -326,25 +442,13 @@ export class PresetStorageService {
           }
         }
 
-        // Create preset with new ID and name
-        const newPreset: DevicePreset = {
-          id: this.generateId(),
-          name: finalName,
-          createdAt: Date.now(),
-          config: preset.config,
-        };
-
-        existingPresets.push(newPreset);
+        // Save preset (savePreset will generate ID and timestamp)
+        await this.savePreset(finalName, preset.config, false);
         existingNames.add(finalName);
         imported++;
       } catch (error) {
         errors.push(`Failed to import "${preset.name}": ${error}`);
       }
-    }
-
-    // Save updated presets
-    if (imported > 0) {
-      this.saveToStorage(existingPresets);
     }
 
     return {
@@ -355,13 +459,13 @@ export class PresetStorageService {
   }
 
   /**
-   * Save presets array to localStorage
+   * Save presets array to localStorage (fallback method)
    */
-  private saveToStorage(presets: DevicePreset[]): void {
+  private saveToStorageFallback(presets: DevicePreset[]): void {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
+      localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(presets));
     } catch (error) {
-      console.error('Failed to save presets:', error);
+      console.error('Failed to save presets to localStorage:', error);
       throw new Error('Failed to save presets to storage');
     }
   }

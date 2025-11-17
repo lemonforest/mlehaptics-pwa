@@ -28,6 +28,7 @@ import { StatusMonitor } from './components/StatusMonitor';
 import { PresetManager } from './components/PresetManager';
 import { bleConfigService, ScanOptions, MotorMode } from './services/ble-config.service';
 import { presetStorageService } from './services/preset-storage.service';
+import { pwaSettingsService } from './services/pwa-settings.service';
 
 function App() {
   const [connected, setConnected] = useState(false);
@@ -58,8 +59,22 @@ function App() {
       setError('Web Bluetooth is not supported in this browser. Please use Chrome, Edge, or Opera.');
     }
 
-    // Initialize preset storage with default presets
-    presetStorageService.initialize();
+    // Initialize storage services
+    const initializeStorage = async () => {
+      try {
+        // Initialize PWA settings (app configuration)
+        await pwaSettingsService.init();
+        console.log('PWA settings initialized');
+
+        // Initialize preset storage with migration and defaults
+        await presetStorageService.initialize();
+        console.log('Preset storage initialized');
+      } catch (error) {
+        console.error('Failed to initialize storage:', error);
+      }
+    };
+
+    initializeStorage();
   }, []);
 
   const handleConnect = async (scanOptions?: ScanOptions) => {
