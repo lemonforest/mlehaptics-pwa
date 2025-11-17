@@ -20,7 +20,7 @@ export const useDebouncedBLESend = <T>(
 ) => {
   const { settings } = usePWASettings();
   const effectiveDelay = delay ?? settings.ui.debounceDelayMs;
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<number>();
   const lastSentRef = useRef<T>(value);
   const isInteractingRef = useRef(false);
 

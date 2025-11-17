@@ -442,15 +442,7 @@ export class PresetStorageService {
           }
         }
 
-        // Create preset with new ID and name
-        const newPreset: DevicePreset = {
-          id: this.generateId(),
-          name: finalName,
-          createdAt: Date.now(),
-          config: preset.config,
-        };
-
-        // Save preset
+        // Save preset (savePreset will generate ID and timestamp)
         await this.savePreset(finalName, preset.config, false);
         existingNames.add(finalName);
         imported++;
