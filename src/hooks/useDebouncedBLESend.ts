@@ -1,21 +1,25 @@
 import { useEffect, useRef } from 'react';
+import { usePWASettings } from '../contexts/PWASettingsContext';
 
 /**
  * Custom hook for debounced BLE sends during slider interaction.
  *
- * Sends the value to BLE after a pause (default 500ms) during user interaction.
+ * Sends the value to BLE after a pause during user interaction.
+ * Delay is configurable via PWA settings (default: 500ms).
  * Prevents echo loops by only sending when user is actively interacting.
  *
  * @param value - Current value to send
  * @param sendFn - Async function to send value over BLE
- * @param delay - Debounce delay in milliseconds (default: 500ms)
+ * @param delay - Optional override for debounce delay (uses settings default if not provided)
  * @returns Object with interaction handlers for slider events
  */
 export const useDebouncedBLESend = <T>(
   value: T,
   sendFn: (val: T) => Promise<void>,
-  delay: number = 500
+  delay?: number
 ) => {
+  const { settings } = usePWASettings();
+  const effectiveDelay = delay ?? settings.ui.debounceDelayMs;
   const timeoutRef = useRef<NodeJS.Timeout>();
   const lastSentRef = useRef<T>(value);
   const isInteractingRef = useRef(false);
@@ -33,7 +37,7 @@ export const useDebouncedBLESend = <T>(
           console.error('Debounced BLE send failed:', error);
         });
         lastSentRef.current = value;
-      }, delay);
+      }, effectiveDelay);
     }
 
     // Cleanup on unmount or value change
@@ -42,7 +46,7 @@ export const useDebouncedBLESend = <T>(
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [value, sendFn, delay]);
+  }, [value, sendFn, effectiveDelay]);
 
   return {
     /**

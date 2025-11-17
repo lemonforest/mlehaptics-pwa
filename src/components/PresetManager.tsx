@@ -60,28 +60,29 @@ export const PresetManager: React.FC<PresetManagerProps> = ({ open, onClose, con
     }
   }, [open]);
 
-  const loadPresets = () => {
-    const loaded = presetStorageService.getAllPresets();
+  const loadPresets = async () => {
+    const loaded = await presetStorageService.getAllPresets();
     setPresets(loaded);
   };
 
-  const handleOpenSaveDialog = () => {
+  const handleOpenSaveDialog = async () => {
     if (!connected) {
       showSnackbar('Please connect to a device first', 'error');
       return;
     }
 
     // Generate auto-incremented name
-    const autoName = presetStorageService.generatePresetName();
+    const autoName = await presetStorageService.generatePresetName();
     setPresetName(autoName);
     setOverwriteWarning(false);
     setSaveDialogOpen(true);
   };
 
-  const handleNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleNameChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const name = event.target.value;
     setPresetName(name);
-    setOverwriteWarning(presetStorageService.presetExists(name));
+    const exists = await presetStorageService.presetExists(name);
+    setOverwriteWarning(exists);
   };
 
   const handleSavePreset = async () => {
@@ -195,10 +196,10 @@ export const PresetManager: React.FC<PresetManagerProps> = ({ open, onClose, con
     setDeleteConfirmDialog({ open: true, preset });
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deleteConfirmDialog.preset) return;
 
-    const success = presetStorageService.deletePreset(deleteConfirmDialog.preset.id);
+    const success = await presetStorageService.deletePreset(deleteConfirmDialog.preset.id);
     if (success) {
       showSnackbar(`Preset "${deleteConfirmDialog.preset.name}" deleted`, 'success');
       loadPresets();
@@ -212,9 +213,9 @@ export const PresetManager: React.FC<PresetManagerProps> = ({ open, onClose, con
     setDeleteConfirmDialog({ open: false, preset: null });
   };
 
-  const handleExportPresets = () => {
+  const handleExportPresets = async () => {
     try {
-      const exportData = presetStorageService.exportPresets();
+      const exportData = await presetStorageService.exportPresets();
       const json = JSON.stringify(exportData, null, 2);
       const blob = new Blob([json], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -244,7 +245,7 @@ export const PresetManager: React.FC<PresetManagerProps> = ({ open, onClose, con
       const text = await file.text();
       const data = JSON.parse(text);
 
-      const result = presetStorageService.importPresets(data, 'merge');
+      const result = await presetStorageService.importPresets(data, 'merge');
 
       if (result.success) {
         showSnackbar(`Successfully imported ${result.imported} preset(s)`, 'success');
