@@ -21,11 +21,13 @@ import BluetoothIcon from '@mui/icons-material/Bluetooth';
 import BluetoothConnectedIcon from '@mui/icons-material/BluetoothConnected';
 import BluetoothDisabledIcon from '@mui/icons-material/BluetoothDisabled';
 import SettingsIcon from '@mui/icons-material/Settings';
+import TuneIcon from '@mui/icons-material/Tune';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import { MotorControl } from './components/MotorControl';
 import { LEDControl } from './components/LEDControl';
 import { StatusMonitor } from './components/StatusMonitor';
 import { PresetManager } from './components/PresetManager';
+import { SettingsDialog } from './components/SettingsDialog';
 import { bleConfigService, ScanOptions, MotorMode } from './services/ble-config.service';
 import { presetStorageService } from './services/preset-storage.service';
 import { pwaSettingsService } from './services/pwa-settings.service';
@@ -45,6 +47,9 @@ function App() {
 
   // Preset manager state
   const [presetDialogOpen, setPresetDialogOpen] = useState(false);
+
+  // PWA settings state
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
 
   // Format build date for display
   const formatBuildDate = (isoDate: string) => {
@@ -147,8 +152,11 @@ function App() {
               )}
             </Typography>
           </Box>
-          <IconButton color="inherit" onClick={() => setPresetDialogOpen(true)} disabled={!bluetoothAvailable} title="Presets">
+          <IconButton color="inherit" onClick={() => setPresetDialogOpen(true)} disabled={!bluetoothAvailable} title="Device Presets">
             <BookmarkIcon />
+          </IconButton>
+          <IconButton color="inherit" onClick={() => setSettingsDialogOpen(true)} title="PWA Settings">
+            <TuneIcon />
           </IconButton>
           {!connected && (
             <IconButton color="inherit" onClick={handleAdvancedScan} disabled={!bluetoothAvailable} title="Scan Options">
@@ -242,6 +250,12 @@ function App() {
         open={presetDialogOpen}
         onClose={() => setPresetDialogOpen(false)}
         connected={connected}
+      />
+
+      {/* PWA Settings Dialog */}
+      <SettingsDialog
+        open={settingsDialogOpen}
+        onClose={() => setSettingsDialogOpen(false)}
       />
 
       <Container
