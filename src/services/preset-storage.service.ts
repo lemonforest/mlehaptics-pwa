@@ -442,7 +442,7 @@ export class PresetStorageService {
           }
         }
 
-        // Save preset (will create new ID and timestamp automatically)
+        // Save preset (savePreset will generate ID and timestamp)
         await this.savePreset(finalName, preset.config, false);
         existingNames.add(finalName);
         imported++;
