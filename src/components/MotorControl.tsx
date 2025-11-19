@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import { MotorMode, MOTOR_MODE_LABELS, bleConfigService } from '../services/ble-config.service';
 import { useDebouncedBLESend } from '../hooks/useDebouncedBLESend';
+import { usePWASettings } from '../contexts/PWASettingsContext';
 
 interface MotorControlProps {
   connected: boolean;
@@ -22,6 +23,10 @@ interface MotorControlProps {
 }
 
 export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeChange }) => {
+  const { settings } = usePWASettings();
+  const compactMode = settings.ui.compactMode;
+  const showAdvancedControls = settings.ui.showAdvancedControls;
+
   const [mode, setMode] = useState<MotorMode>(MotorMode.MODE_1HZ_50);
   const [customFrequency, setCustomFrequency] = useState(100); // 1.00 Hz
   const [customDutyCycle, setCustomDutyCycle] = useState(50);
@@ -202,12 +207,12 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
 
   return (
     <Card>
-      <CardContent>
+      <CardContent sx={{ py: compactMode ? 1.5 : 2, '&:last-child': { pb: compactMode ? 2 : 3 } }}>
         <Typography variant="h6" gutterBottom>
           Motor Control
         </Typography>
 
-        <Grid container spacing={3}>
+        <Grid container spacing={compactMode ? 2 : 3}>
           <Grid item xs={12}>
             <FormControl fullWidth disabled={!connected}>
               <InputLabel>Mode</InputLabel>
@@ -225,13 +230,13 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
             </FormControl>
           </Grid>
 
-          {mode === MotorMode.MODE_CUSTOM && (
+          {mode === MotorMode.MODE_CUSTOM && showAdvancedControls && (
             <>
               <Grid item xs={12}>
                 <Typography gutterBottom>
                   Custom Frequency: {(customFrequency / 100).toFixed(2)} Hz
                 </Typography>
-                <Box sx={{ px: 2, py: 3 }}>
+                <Box sx={{ px: compactMode ? 1 : 2, py: compactMode ? 2 : 3 }}>
                   <Slider
                     value={freqToSliderValue(customFrequency)}
                     onChange={handleFrequencyChange}
@@ -259,7 +264,7 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
                 <Typography gutterBottom>
                   Custom Duty Cycle: {customDutyCycle}%
                 </Typography>
-                <Box sx={{ px: 2, py: 3 }}>
+                <Box sx={{ px: compactMode ? 1 : 2, py: compactMode ? 2 : 3 }}>
                   <Slider
                     value={customDutyCycle}
                     onChange={handleDutyCycleChange}
@@ -288,7 +293,7 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
             <Typography gutterBottom>
               PWM Intensity: {pwmIntensity}% {pwmIntensity === 0 && '(LED-only)'}
             </Typography>
-            <Box sx={{ px: 2, py: 3 }}>
+            <Box sx={{ px: compactMode ? 1 : 2, py: compactMode ? 2 : 3 }}>
               <Slider
                 value={pwmIntensity}
                 onChange={handlePWMIntensityChange}
