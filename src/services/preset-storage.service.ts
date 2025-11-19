@@ -24,7 +24,7 @@ const DEFAULT_PRESETS: Omit<DevicePreset, 'id' | 'createdAt'>[] = [
   {
     name: 'Standard',
     config: {
-      mode: MotorMode.MODE_1HZ_50,
+      mode: MotorMode.MODE_1HZ_25,
       customFrequency: 100,
       customDutyCycle: 50,
       pwmIntensity: 55,
@@ -54,7 +54,7 @@ const DEFAULT_PRESETS: Omit<DevicePreset, 'id' | 'createdAt'>[] = [
   {
     name: 'Intense',
     config: {
-      mode: MotorMode.MODE_1HZ_50,
+      mode: MotorMode.MODE_2HZ_25,
       customFrequency: 200,
       customDutyCycle: 50,
       pwmIntensity: 80,

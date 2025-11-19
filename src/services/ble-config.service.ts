@@ -32,20 +32,20 @@ export const CHARACTERISTICS = {
   BATTERY_LEVEL: '4bcae9be-9829-4f0a-9e88-267de5e7020c',
 } as const;
 
-// Motor modes (AD032)
+// Motor modes (AD032 - Updated specification)
 export enum MotorMode {
-  MODE_1HZ_50 = 0,
+  MODE_05HZ_25 = 0,
   MODE_1HZ_25 = 1,
-  MODE_05HZ_50 = 2,
-  MODE_05HZ_25 = 3,
+  MODE_15HZ_25 = 2,
+  MODE_2HZ_25 = 3,
   MODE_CUSTOM = 4,
 }
 
 export const MOTOR_MODE_LABELS = {
-  [MotorMode.MODE_1HZ_50]: '1.0 Hz @ 50%',
-  [MotorMode.MODE_1HZ_25]: '1.0 Hz @ 25%',
-  [MotorMode.MODE_05HZ_50]: '0.5 Hz @ 50%',
   [MotorMode.MODE_05HZ_25]: '0.5 Hz @ 25%',
+  [MotorMode.MODE_1HZ_25]: '1.0 Hz @ 25%',
+  [MotorMode.MODE_15HZ_25]: '1.5 Hz @ 25%',
+  [MotorMode.MODE_2HZ_25]: '2.0 Hz @ 25%',
   [MotorMode.MODE_CUSTOM]: 'Custom',
 };
 

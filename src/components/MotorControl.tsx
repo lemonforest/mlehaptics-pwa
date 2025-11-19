@@ -27,7 +27,7 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
   const compactMode = settings.ui.compactMode;
   const showAdvancedControls = settings.ui.showAdvancedControls;
 
-  const [mode, setMode] = useState<MotorMode>(MotorMode.MODE_1HZ_50);
+  const [mode, setMode] = useState<MotorMode>(MotorMode.MODE_05HZ_25);
   const [customFrequency, setCustomFrequency] = useState(100); // 1.00 Hz
   const [customDutyCycle, setCustomDutyCycle] = useState(50);
   const [pwmIntensity, setPWMIntensity] = useState(75);

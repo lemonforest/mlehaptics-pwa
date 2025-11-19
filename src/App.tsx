@@ -40,7 +40,7 @@ function App() {
   const [error, setError] = useState<string>('');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [bluetoothAvailable, setBluetoothAvailable] = useState(true);
-  const [motorMode, setMotorMode] = useState<MotorMode>(MotorMode.MODE_1HZ_50);
+  const [motorMode, setMotorMode] = useState<MotorMode>(MotorMode.MODE_05HZ_25);
 
   // Scan options state
   const [scanDialogOpen, setScanDialogOpen] = useState(false);
