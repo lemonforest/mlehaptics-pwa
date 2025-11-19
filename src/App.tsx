@@ -21,16 +21,20 @@ import BluetoothIcon from '@mui/icons-material/Bluetooth';
 import BluetoothConnectedIcon from '@mui/icons-material/BluetoothConnected';
 import BluetoothDisabledIcon from '@mui/icons-material/BluetoothDisabled';
 import SettingsIcon from '@mui/icons-material/Settings';
+import TuneIcon from '@mui/icons-material/Tune';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import { MotorControl } from './components/MotorControl';
 import { LEDControl } from './components/LEDControl';
 import { StatusMonitor } from './components/StatusMonitor';
 import { PresetManager } from './components/PresetManager';
+import { SettingsDialog } from './components/SettingsDialog';
 import { bleConfigService, ScanOptions, MotorMode } from './services/ble-config.service';
 import { presetStorageService } from './services/preset-storage.service';
 import { pwaSettingsService } from './services/pwa-settings.service';
+import { usePWASettings } from './contexts/PWASettingsContext';
 
 function App() {
+  const { settings } = usePWASettings();
   const [connected, setConnected] = useState(false);
   const [deviceName, setDeviceName] = useState<string>('');
   const [error, setError] = useState<string>('');
@@ -45,6 +49,13 @@ function App() {
 
   // Preset manager state
   const [presetDialogOpen, setPresetDialogOpen] = useState(false);
+
+  // PWA settings state
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+
+  // Apply settings
+  const compactMode = settings.ui.compactMode;
+  const showAdvancedControls = settings.ui.showAdvancedControls;
 
   // Format build date for display
   const formatBuildDate = (isoDate: string) => {
@@ -147,11 +158,14 @@ function App() {
               )}
             </Typography>
           </Box>
-          <IconButton color="inherit" onClick={() => setPresetDialogOpen(true)} disabled={!bluetoothAvailable} title="Presets">
+          <IconButton color="inherit" onClick={() => setPresetDialogOpen(true)} disabled={!bluetoothAvailable} title="Device Presets">
             <BookmarkIcon />
           </IconButton>
-          {!connected && (
-            <IconButton color="inherit" onClick={handleAdvancedScan} disabled={!bluetoothAvailable} title="Scan Options">
+          <IconButton color="inherit" onClick={() => setSettingsDialogOpen(true)} title="PWA Settings">
+            <TuneIcon />
+          </IconButton>
+          {!connected && showAdvancedControls && (
+            <IconButton color="inherit" onClick={handleAdvancedScan} disabled={!bluetoothAvailable} title="Advanced Scan Options">
               <SettingsIcon />
             </IconButton>
           )}
@@ -244,12 +258,18 @@ function App() {
         connected={connected}
       />
 
+      {/* PWA Settings Dialog */}
+      <SettingsDialog
+        open={settingsDialogOpen}
+        onClose={() => setSettingsDialogOpen(false)}
+      />
+
       <Container
         maxWidth="md"
         sx={{
-          mt: 2,
-          mb: 4,
-          px: { xs: 2, sm: 3 },
+          mt: compactMode ? 1 : 2,
+          mb: compactMode ? 2 : 4,
+          px: { xs: compactMode ? 1 : 2, sm: compactMode ? 2 : 3 },
           overflowY: 'auto',
           WebkitOverflowScrolling: 'touch',
         }}
@@ -291,7 +311,7 @@ function App() {
           </Alert>
         )}
 
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: compactMode ? 1 : 2 }}>
           <MotorControl connected={connected} onModeChange={setMotorMode} />
           <LEDControl connected={connected} motorMode={motorMode} />
           <StatusMonitor connected={connected} />

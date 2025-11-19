@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import { COLOR_PALETTE, bleConfigService, MotorMode, MOTOR_MODE_LABELS } from '../services/ble-config.service';
 import { useDebouncedBLESend } from '../hooks/useDebouncedBLESend';
+import { usePWASettings } from '../contexts/PWASettingsContext';
 
 interface LEDControlProps {
   connected: boolean;
@@ -25,6 +26,9 @@ interface LEDControlProps {
 }
 
 export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) => {
+  const { settings } = usePWASettings();
+  const compactMode = settings.ui.compactMode;
+
   const [ledEnable, setLEDEnable] = useState(false);
   const [colorMode, setColorMode] = useState(1); // 0=palette, 1=custom RGB
   const [paletteIndex, setPaletteIndex] = useState(0);
@@ -191,18 +195,18 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
 
   return (
     <Card>
-      <CardContent>
+      <CardContent sx={{ py: compactMode ? 1.5 : 2, '&:last-child': { pb: compactMode ? 2 : 3 } }}>
         <Typography variant="h6" gutterBottom>
           LED Control
         </Typography>
 
         {!isCustomMode && (
-          <Alert severity="info" sx={{ mb: 2 }}>
+          <Alert severity="info" sx={{ mb: compactMode ? 1 : 2 }}>
             LED settings are only available in Custom motor mode. Currently in: <strong>{MOTOR_MODE_LABELS[motorMode]}</strong>
           </Alert>
         )}
 
-        <Grid container spacing={3}>
+        <Grid container spacing={compactMode ? 2 : 3}>
           <Grid item xs={12}>
             <FormControlLabel
               control={
@@ -256,7 +260,7 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
             <>
               <Grid item xs={12}>
                 <Typography gutterBottom>Red: {customRGB[0]}</Typography>
-                <Box sx={{ px: 2, py: 3 }}>
+                <Box sx={{ px: compactMode ? 1 : 2, py: compactMode ? 2 : 3 }}>
                   <Slider
                     value={customRGB[0]}
                     onChange={(_, value) => handleRGBChange('r', value as number)}
@@ -273,7 +277,7 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
 
               <Grid item xs={12}>
                 <Typography gutterBottom>Green: {customRGB[1]}</Typography>
-                <Box sx={{ px: 2, py: 3 }}>
+                <Box sx={{ px: compactMode ? 1 : 2, py: compactMode ? 2 : 3 }}>
                   <Slider
                     value={customRGB[1]}
                     onChange={(_, value) => handleRGBChange('g', value as number)}
@@ -290,7 +294,7 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
 
               <Grid item xs={12}>
                 <Typography gutterBottom>Blue: {customRGB[2]}</Typography>
-                <Box sx={{ px: 2, py: 3 }}>
+                <Box sx={{ px: compactMode ? 1 : 2, py: compactMode ? 2 : 3 }}>
                   <Slider
                     value={customRGB[2]}
                     onChange={(_, value) => handleRGBChange('b', value as number)}
@@ -331,7 +335,7 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
             <Typography gutterBottom>
               Brightness: {brightness}%
             </Typography>
-            <Box sx={{ px: 2, py: 3 }}>
+            <Box sx={{ px: compactMode ? 1 : 2, py: compactMode ? 2 : 3 }}>
               <Slider
                 value={brightness}
                 onChange={handleBrightnessChange}

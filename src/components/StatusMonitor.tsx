@@ -19,12 +19,16 @@ import TimerIcon from '@mui/icons-material/Timer';
 import { bleConfigService } from '../services/ble-config.service';
 import { useSessionTimer } from '../hooks/useSessionTimer';
 import { useBatteryLevel } from '../hooks/useBatteryLevel';
+import { usePWASettings } from '../contexts/PWASettingsContext';
 
 interface StatusMonitorProps {
   connected: boolean;
 }
 
 export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
+  const { settings } = usePWASettings();
+  const compactMode = settings.ui.compactMode;
+
   const [sessionDuration, setSessionDuration] = useState(1200); // 20 min default
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
 
@@ -134,17 +138,17 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
 
   return (
     <Card>
-      <CardContent>
+      <CardContent sx={{ py: compactMode ? 1.5 : 2, '&:last-child': { pb: compactMode ? 2 : 3 } }}>
         <Typography variant="h6" gutterBottom>
           Status & Monitoring
         </Typography>
 
-        <Grid container spacing={3}>
+        <Grid container spacing={compactMode ? 2 : 3}>
           <Grid item xs={12}>
             <Typography gutterBottom>
               Session Duration: {formatTime(sessionDuration)} ({sessionDuration / 60} minutes)
             </Typography>
-            <Box sx={{ px: 2, py: 3 }}>
+            <Box sx={{ px: compactMode ? 1 : 2, py: compactMode ? 2 : 3 }}>
               <Slider
                 value={sessionDuration}
                 onChange={handleDurationChange}
