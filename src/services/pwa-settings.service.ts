@@ -181,8 +181,6 @@ export class PWASettingsService {
     success: boolean;
     errors: string[];
   }> {
-    const errors: string[] = [];
-
     // Validate export format
     if (data.type !== 'pwa-settings' || !data.settings) {
       return {
