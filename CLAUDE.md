@@ -15,7 +15,7 @@ This document provides context and guidelines for AI assistants working with the
 - **State Management**: React hooks (no external state management library)
 
 ### Key Architecture Document
-**[AD032: BLE Configuration Service Architecture](https://github.com/lemonforest/mlehaptics/blob/main/docs/architecture_decisions.md#ad032-ble-configuration-service-architecture)**
+**[AD032: BLE Configuration Service](https://github.com/lemonforest/mlehaptics/tree/main/docs/adr)** (in the ADR directory)
 
 This is the **foundational specification** that defines:
 - Complete BLE service UUID structure (12 characteristics)
@@ -25,26 +25,14 @@ This is the **foundational specification** that defines:
 
 **Always consult AD032** when working on BLE-related features or characteristic implementations.
 
-### Local Architecture Documentation
-To avoid truncation issues when fetching the architecture decisions document from the web, a local copy is maintained:
+### Architecture Decision Records (ADRs)
+The embedded project uses individual ADR files located at:
+- **Repository:** [lemonforest/mlehaptics/docs/adr](https://github.com/lemonforest/mlehaptics/tree/main/docs/adr)
 
-**Location:** `docs/external/architecture_decisions.md`
-
-**Update the local copy:**
-```bash
-npm run fetch-docs
-```
-
-This fetches the latest architecture decisions document from the mlehaptics embedded repo and saves it locally. The script:
-- Downloads the complete file (avoids web truncation)
-- Reports file size and line count
-- Shows the highest AD number found
-- Stores in `docs/external/` for easy reference
-
-**When to update:**
+**When to consult ADRs:**
 - Before starting work on BLE features
-- When AD032 or other specs may have changed
-- If you see references to newer AD numbers (AD033, AD034, etc.)
+- When implementing new characteristics
+- If firmware behavior seems different from expected
 - After the embedded team announces spec updates
 
 ## Project Structure
@@ -135,7 +123,7 @@ Session monitoring implementing AD032's status characteristics:
 ## Related Repositories
 
 - **Embedded Firmware**: [lemonforest/mlehaptics](https://github.com/lemonforest/mlehaptics) - ESP32 firmware implementing AD032
-- **Architecture Decisions**: [AD032 and other specs](https://github.com/lemonforest/mlehaptics/blob/main/docs/architecture_decisions.md)
+- **Architecture Decisions**: [ADR directory](https://github.com/lemonforest/mlehaptics/tree/main/docs/adr)
 
 ## Important Notes
 

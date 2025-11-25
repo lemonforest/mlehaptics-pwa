@@ -7,6 +7,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.0] - 2025-11-25
+
+### Added
+- **BLE disconnect callback**: UI now properly updates when device unexpectedly disconnects (e.g., device powered off, out of range)
+- **Connecting overlay**: Responsive branded loading screen during BLE connection with:
+  - Animated Bluetooth icon
+  - Progress spinner
+  - MLEHaptics branding
+  - Responsive design (centered card on desktop, fuller on mobile)
+- Connect button now disabled during connection to prevent double-clicks
+- Filters out "user cancelled" error when closing device picker
+
+### Changed
+- **LED brightness is now universal**: Brightness slider works in all motor modes, not just Custom mode
+- Updated brightness helper text to clarify it applies to all modes
+
+### Technical
+- Added `onDisconnect()` subscription method to `BLEConfigService` for external disconnect listeners
+- Added `ConnectingOverlay` component with MUI Dialog and responsive breakpoints
+- Added `isConnecting` state to App.tsx for connection progress tracking
+
+## [2.3.1] - 2025-11-24
+
+### Changed
+- **Updated motor mode enums**: Motor modes now match updated firmware specification
+  - Renamed preset modes for clarity (e.g., MODE_1HZ_50 → MODE_05HZ_25)
+  - Updated mode labels in UI to reflect actual frequency/duty cycle values
+
+## [2.3.0] - 2025-11-22
+
+### Added
+- **PWA Settings Dialog**: New settings UI for app-level configuration
+  - Theme selection (Light/Dark/Auto)
+  - Compact mode toggle for smaller screens
+  - Show advanced controls option
+  - Slider response delay configuration
+  - Auto-reconnect settings
+- **Compact mode**: Reduced spacing throughout UI for better mobile experience
+- **Advanced controls toggle**: Hide/show debug and power-user options
+
+### Technical
+- Added `SettingsDialog` component with full settings management
+- Implemented theme switching with system preference detection
+- Added compact mode responsive styling throughout components
+
+## [2.2.0] - 2025-11-20
+
+### Added
+- **Pause-to-send slider functionality**: Sliders now use debounced sending during interaction
+  - Sends value to device after configurable pause (default 500ms)
+  - Prevents BLE flooding while user adjusts sliders
+  - Configurable delay in PWA settings
+- **IndexedDB storage**: Migrated from localStorage for better data management
+  - PWA settings stored in IndexedDB
+  - Device presets stored in IndexedDB
+  - Automatic migration from localStorage on first load
+- **PWA Settings infrastructure**: Foundation for app-level configuration
+  - Settings context provider for global access
+  - Settings service with IndexedDB persistence
+
+### Changed
+- **Motor duty cycle range**: Updated to 10-100% (was 0-50%) per firmware update
+
+### Technical
+- Added `IndexedDBService` for database operations
+- Added `PWASettingsContext` for React state management
+- Added `pwa-settings.service.ts` for settings persistence
+- Created type definitions for PWA settings
+
 ## [2.1.0] - 2025-11-16
 
 ### Changed - Performance & UX
@@ -209,7 +278,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - BLE Configuration Service UUID: `6E400002-B5A3-F393-E0A9-E50E24DCCA9E`
 - 12 BLE characteristics for motor, LED, and session control
 
-[unreleased]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.1.0...HEAD
+[unreleased]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.3.1...v2.4.0
+[2.3.1]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.3.0...v2.3.1
+[2.3.0]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.2.0...v2.3.0
+[2.2.0]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/lemonforest/mlehaptics-pwa/compare/v1.5.1...v2.0.0
 [1.5.1]: https://github.com/lemonforest/mlehaptics-pwa/compare/v1.5.0...v1.5.1

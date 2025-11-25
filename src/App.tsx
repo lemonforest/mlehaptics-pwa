@@ -28,6 +28,7 @@ import { LEDControl } from './components/LEDControl';
 import { StatusMonitor } from './components/StatusMonitor';
 import { PresetManager } from './components/PresetManager';
 import { SettingsDialog } from './components/SettingsDialog';
+import { ConnectingOverlay } from './components/ConnectingOverlay';
 import { bleConfigService, ScanOptions, MotorMode } from './services/ble-config.service';
 import { presetStorageService } from './services/preset-storage.service';
 import { pwaSettingsService } from './services/pwa-settings.service';
@@ -36,6 +37,7 @@ import { usePWASettings } from './contexts/PWASettingsContext';
 function App() {
   const { settings } = usePWASettings();
   const [connected, setConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [deviceName, setDeviceName] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -86,11 +88,25 @@ function App() {
     };
 
     initializeStorage();
+
+    // Subscribe to disconnect events from BLE service
+    // This handles unexpected disconnects (e.g., device powered off, out of range)
+    const unsubscribeDisconnect = bleConfigService.onDisconnect(() => {
+      console.log('Device disconnected (notified via BLE service)');
+      setConnected(false);
+      setDeviceName('');
+      setIsConnecting(false);
+    });
+
+    return () => {
+      unsubscribeDisconnect();
+    };
   }, []);
 
   const handleConnect = async (scanOptions?: ScanOptions) => {
     try {
       setError('');
+      setIsConnecting(true);
       const options = scanOptions || {
         namePrefix: namePrefix || undefined,
         acceptAllDevices: acceptAllDevices,
@@ -103,8 +119,13 @@ function App() {
       setScanDialogOpen(false);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to connect to device';
-      setError(errorMessage);
+      // Don't show error if user cancelled the device picker
+      if (errorMessage !== 'User cancelled the requestDevice() chooser.') {
+        setError(errorMessage);
+      }
       setConnected(false);
+    } finally {
+      setIsConnecting(false);
     }
   };
 
@@ -165,14 +186,14 @@ function App() {
             <TuneIcon />
           </IconButton>
           {!connected && showAdvancedControls && (
-            <IconButton color="inherit" onClick={handleAdvancedScan} disabled={!bluetoothAvailable} title="Advanced Scan Options">
+            <IconButton color="inherit" onClick={handleAdvancedScan} disabled={!bluetoothAvailable || isConnecting} title="Advanced Scan Options">
               <SettingsIcon />
             </IconButton>
           )}
           <Button
             color="inherit"
             onClick={connected ? handleDisconnect : handleQuickConnect}
-            disabled={!bluetoothAvailable}
+            disabled={!bluetoothAvailable || isConnecting}
             startIcon={connected ? <BluetoothDisabledIcon /> : <BluetoothIcon />}
           >
             {connected ? 'Disconnect' : 'Connect Device'}
@@ -263,6 +284,9 @@ function App() {
         open={settingsDialogOpen}
         onClose={() => setSettingsDialogOpen(false)}
       />
+
+      {/* Connecting Overlay */}
+      <ConnectingOverlay open={isConnecting} />
 
       <Container
         maxWidth="md"
