@@ -151,6 +151,14 @@ Session monitoring implementing AD032's status characteristics:
 - **Document changes**: Update README and version number for user-facing changes
 - **Follow git workflow**: Use feature branches, write clear commit messages, push to specified branches
 
+### Version Bumping
+After completing changes, suggest a version bump based on the type of changes made:
+- **Patch** (x.x.X): Bug fixes, minor tweaks, documentation updates
+- **Minor** (x.X.0): New features, new BLE characteristics, UI enhancements
+- **Major** (X.0.0): Breaking changes, major architecture changes, incompatible API changes
+
+Use `npm version patch|minor|major --no-git-tag-version` to bump the version, then commit with a message like `chore: Bump version to X.X.X`.
+
 ### Current Branch
 Development should occur on: `claude/add-link-to-o-01SBDCCRsvHhi1wFmGNY7U87`
 
