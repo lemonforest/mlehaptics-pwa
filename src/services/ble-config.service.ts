@@ -111,6 +111,9 @@ export class BLEConfigService {
   private characteristicsWithNotifications: Set<string> = new Set();
   private disconnectHandler: (() => void) | null = null;
 
+  // External disconnect listeners (for UI notification)
+  private disconnectListeners: Set<() => void> = new Set();
+
   private buildRequestOptions(options: ScanOptions): RequestDeviceOptions {
     // If acceptAllDevices is true, show all BLE devices (testing mode)
     if (options.acceptAllDevices) {
@@ -251,6 +254,17 @@ export class BLEConfigService {
   private handleDisconnect(): void {
     // Clean up all internal state
     // This is called both by disconnect() and by the gattserverdisconnected event
+
+    // Notify external disconnect listeners BEFORE clearing state
+    // This allows UI components to react to the disconnect
+    this.disconnectListeners.forEach(listener => {
+      try {
+        listener();
+      } catch (error) {
+        console.error('Error in disconnect listener:', error);
+      }
+    });
+
     this.device = null;
     this.server = null;
     this.service = null;
@@ -261,6 +275,7 @@ export class BLEConfigService {
     this.characteristicEventListeners.clear();
     this.disconnectHandler = null;
     this.configChangeListeners.clear();
+    // Note: We don't clear disconnectListeners here - they persist across connections
   }
 
   isConnected(): boolean {
@@ -393,6 +408,21 @@ export class BLEConfigService {
     // Return unsubscribe function
     return () => {
       this.configChangeListeners.delete(callback);
+    };
+  }
+
+  /**
+   * Subscribe to disconnect events (both user-initiated and unexpected)
+   * Useful for UI components that need to update when device disconnects
+   * @param callback Function to call when device disconnects
+   * @returns Unsubscribe function
+   */
+  onDisconnect(callback: () => void): () => void {
+    this.disconnectListeners.add(callback);
+
+    // Return unsubscribe function
+    return () => {
+      this.disconnectListeners.delete(callback);
     };
   }
 
