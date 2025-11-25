@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.0] - 2025-11-25
+
+### Added
+- **BLE disconnect callback**: UI now properly updates when device unexpectedly disconnects (e.g., device powered off, out of range)
+- **Connecting overlay**: Responsive branded loading screen during BLE connection with:
+  - Animated Bluetooth icon
+  - Progress spinner
+  - MLEHaptics branding
+  - Responsive design (centered card on desktop, fuller on mobile)
+- Connect button now disabled during connection to prevent double-clicks
+- Filters out "user cancelled" error when closing device picker
+
+### Changed
+- **LED brightness is now universal**: Brightness slider works in all motor modes, not just Custom mode
+- Updated brightness helper text to clarify it applies to all modes
+
+### Technical
+- Added `onDisconnect()` subscription method to `BLEConfigService` for external disconnect listeners
+- Added `ConnectingOverlay` component with MUI Dialog and responsive breakpoints
+- Added `isConnecting` state to App.tsx for connection progress tracking
+
 ## [2.1.0] - 2025-11-16
 
 ### Changed - Performance & UX
@@ -209,7 +230,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - BLE Configuration Service UUID: `6E400002-B5A3-F393-E0A9-E50E24DCCA9E`
 - 12 BLE characteristics for motor, LED, and session control
 
-[unreleased]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.1.0...HEAD
+[unreleased]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.1.0...v2.4.0
 [2.1.0]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/lemonforest/mlehaptics-pwa/compare/v1.5.1...v2.0.0
 [1.5.1]: https://github.com/lemonforest/mlehaptics-pwa/compare/v1.5.0...v1.5.1
