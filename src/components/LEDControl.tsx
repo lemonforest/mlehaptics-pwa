@@ -350,14 +350,14 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
                   { value: 20, label: '20%' },
                   { value: 30, label: '30%' },
                 ]}
-                disabled={!connected || !isCustomMode || !ledEnable}
+                disabled={!connected}
                 valueLabelDisplay="auto"
                 valueLabelFormat={(value) => `${value}%`}
                 sx={{ touchAction: 'none' }}
               />
             </Box>
             <Typography variant="caption" color="text.secondary">
-              User comfort range (eye strain prevention)
+              Universal LED brightness (all modes)
             </Typography>
           </Grid>
         </Grid>
