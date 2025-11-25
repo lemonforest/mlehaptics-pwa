@@ -35,6 +35,7 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
   // Initialize with default values
   const [initialSessionTime, setInitialSessionTime] = useState(0);
   const [initialBatteryLevel, setInitialBatteryLevel] = useState(100);
+  const [initialClientBatteryLevel, setInitialClientBatteryLevel] = useState(0);
 
   // Subscribe function for session timer notifications
   const subscribeSessionTime = useCallback((callback: (time: number) => void) => {
@@ -48,6 +49,12 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
     return bleConfigService.subscribe('BATTERY_LEVEL', callback);
   }, [connected]);
 
+  // Subscribe function for client battery level notifications
+  const subscribeClientBatteryLevel = useCallback((callback: (level: number) => void) => {
+    if (!connected) return () => {};
+    return bleConfigService.subscribe('CLIENT_BATTERY', callback);
+  }, [connected]);
+
   // Use custom hooks with BLE notifications
   const sessionTimer = useSessionTimer({
     initialTime: initialSessionTime,
@@ -59,6 +66,12 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
   const battery = useBatteryLevel({
     initialLevel: initialBatteryLevel,
     onSubscribe: subscribeBatteryLevel,
+    autoStart: false, // Will start manually after loading config
+  });
+
+  const clientBattery = useBatteryLevel({
+    initialLevel: initialClientBatteryLevel,
+    onSubscribe: subscribeClientBatteryLevel,
     autoStart: false, // Will start manually after loading config
   });
 
@@ -88,10 +101,12 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
       setSessionDuration(config.sessionDuration);
       setInitialSessionTime(config.sessionTime);
       setInitialBatteryLevel(config.batteryLevel);
+      setInitialClientBatteryLevel(config.clientBatteryLevel);
 
       // Set initial values in hooks
       sessionTimer.setTime(config.sessionTime);
       battery.setBatteryLevel(config.batteryLevel);
+      clientBattery.setBatteryLevel(config.clientBatteryLevel);
 
       // Start the local timer now that we have initial values
       sessionTimer.start();
@@ -129,10 +144,10 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getBatteryIcon = () => {
-    if (battery.batteryLevel > 75) return <BatteryFullIcon />;
-    if (battery.batteryLevel > 50) return <Battery80Icon />;
-    if (battery.batteryLevel > 25) return <Battery50Icon />;
+  const getBatteryIcon = (level: number) => {
+    if (level > 75) return <BatteryFullIcon />;
+    if (level > 50) return <Battery80Icon />;
+    if (level > 25) return <Battery50Icon />;
     return <Battery20Icon />;
   };
 
@@ -198,8 +213,8 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
           <Grid item xs={12}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {getBatteryIcon()}
-                <Typography>Battery Level</Typography>
+                {getBatteryIcon(battery.batteryLevel)}
+                <Typography>Host Battery</Typography>
               </Box>
               <Chip
                 label={`${battery.batteryLevel}%`}
@@ -215,10 +230,37 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
             />
             {battery.isLow && (
               <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
-                Low battery! Please charge the device.
+                Low battery! Please charge the host device.
               </Typography>
             )}
           </Grid>
+
+          {clientBattery.batteryLevel > 0 && (
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {getBatteryIcon(clientBattery.batteryLevel)}
+                  <Typography>Client Battery</Typography>
+                </Box>
+                <Chip
+                  label={`${clientBattery.batteryLevel}%`}
+                  size="small"
+                  color={clientBattery.color}
+                />
+              </Box>
+              <LinearProgress
+                variant="determinate"
+                value={clientBattery.batteryLevel}
+                color={clientBattery.color}
+                sx={{ height: 10, borderRadius: 1 }}
+              />
+              {clientBattery.isLow && (
+                <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
+                  Low battery! Please charge the client device.
+                </Typography>
+              )}
+            </Grid>
+          )}
 
           {!connected && (
             <Grid item xs={12}>
