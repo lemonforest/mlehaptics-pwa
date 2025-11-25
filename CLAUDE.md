@@ -146,6 +146,7 @@ Session monitoring implementing AD032's status characteristics:
 ## Working with Claude
 
 ### Best Practices
+- **Plan before acting**: Always propose a plan and get user approval before making changes. Outline what files will be modified, what the approach will be, and any potential impacts.
 - **Reference AD032 first**: When modifying BLE features, always cite the relevant AD032 section
 - **Test with hardware**: Changes should be tested with real MLEHaptics devices when possible
 - **Document changes**: Update README and version number for user-facing changes
