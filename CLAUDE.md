@@ -160,6 +160,10 @@ After completing changes, suggest a version bump based on the type of changes ma
 
 Use `npm version patch|minor|major --no-git-tag-version` to bump the version, then commit with a message like `chore: Bump version to X.X.X`.
 
+### Changelog & Documentation
+- **Update CHANGELOG.md**: After making changes, add an entry to the changelog describing what was added, changed, or fixed.
+- **Update README.md**: If changes affect user-facing features, usage instructions, or requirements, suggest updating the README as well.
+
 ### Current Branch
 Development should occur on: `claude/add-link-to-o-01SBDCCRsvHhi1wFmGNY7U87`
 
