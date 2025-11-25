@@ -146,10 +146,23 @@ Session monitoring implementing AD032's status characteristics:
 ## Working with Claude
 
 ### Best Practices
+- **Plan before acting**: Always propose a plan and get user approval before making changes. Outline what files will be modified, what the approach will be, and any potential impacts.
 - **Reference AD032 first**: When modifying BLE features, always cite the relevant AD032 section
 - **Test with hardware**: Changes should be tested with real MLEHaptics devices when possible
 - **Document changes**: Update README and version number for user-facing changes
 - **Follow git workflow**: Use feature branches, write clear commit messages, push to specified branches
+
+### Version Bumping
+After completing changes, suggest a version bump based on the type of changes made:
+- **Patch** (x.x.X): Bug fixes, minor tweaks, documentation updates
+- **Minor** (x.X.0): New features, new BLE characteristics, UI enhancements
+- **Major** (X.0.0): Breaking changes, major architecture changes, incompatible API changes
+
+Use `npm version patch|minor|major --no-git-tag-version` to bump the version, then commit with a message like `chore: Bump version to X.X.X`.
+
+### Changelog & Documentation
+- **Update CHANGELOG.md**: After making changes, add an entry to the changelog describing what was added, changed, or fixed.
+- **Update README.md**: If changes affect user-facing features, usage instructions, or requirements, suggest updating the README as well.
 
 ### Current Branch
 Development should occur on: `claude/add-link-to-o-01SBDCCRsvHhi1wFmGNY7U87`

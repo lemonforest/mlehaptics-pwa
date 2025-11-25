@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.1] - 2025-11-25
+
+### Added
+- **Client battery monitoring**: Support for AD038 CLIENT_BATTERY characteristic (0x020D) for dual-device mode
+  - Displays client device battery level in Status & Monitoring section
+  - Only shown when a client device is connected (battery > 0%)
+  - Real-time updates via BLE notifications
+- Renamed "Battery Level" to "Host Battery" for clarity in dual-device setups
+
+### Technical
+- Added `CLIENT_BATTERY` UUID to BLE characteristics
+- Added `clientBatteryLevel` to `DeviceConfig` interface
+- Added `readClientBatteryLevel()` method to `BLEConfigService`
+
 ## [2.4.0] - 2025-11-25
 
 ### Added

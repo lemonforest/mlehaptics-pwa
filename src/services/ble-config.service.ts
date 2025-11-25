@@ -30,6 +30,7 @@ export const CHARACTERISTICS = {
   SESSION_DURATION: '4bcae9be-9829-4f0a-9e88-267de5e7020a',
   SESSION_TIME: '4bcae9be-9829-4f0a-9e88-267de5e7020b',
   BATTERY_LEVEL: '4bcae9be-9829-4f0a-9e88-267de5e7020c',
+  CLIENT_BATTERY: '4bcae9be-9829-4f0a-9e88-267de5e7020d',
 } as const;
 
 // Motor modes (AD032 - Updated specification)
@@ -87,6 +88,7 @@ export interface DeviceConfig {
   sessionDuration: number; // 1200-5400 sec (20-90 min)
   sessionTime: number; // Elapsed seconds (read-only)
   batteryLevel: number; // 0-100% (read-only)
+  clientBatteryLevel: number; // 0-100% (read-only, 0 if no client connected)
 }
 
 export interface ScanOptions {
@@ -301,7 +303,7 @@ export class BLEConfigService {
 
   private async setupNotifications(): Promise<void> {
     // Setup notifications for status characteristics and MODE (if supported by firmware)
-    const notifyChars = ['SESSION_TIME', 'BATTERY_LEVEL', 'MODE'];
+    const notifyChars = ['SESSION_TIME', 'BATTERY_LEVEL', 'CLIENT_BATTERY', 'MODE'];
 
     for (const charKey of notifyChars) {
       const char = this.characteristics.get(charKey);
@@ -361,6 +363,7 @@ export class BLEConfigService {
         value = char.value.getUint32(0, true);
         break;
       case 'BATTERY_LEVEL':
+      case 'CLIENT_BATTERY':
       case 'MODE':
       case 'CUSTOM_DUTY_CYCLE':
       case 'PWM_INTENSITY':
@@ -509,6 +512,7 @@ export class BLEConfigService {
       sessionDuration: await this.readUint32('SESSION_DURATION'),
       sessionTime: await this.readUint32('SESSION_TIME'),
       batteryLevel: await this.readUint8('BATTERY_LEVEL'),
+      clientBatteryLevel: await this.readUint8('CLIENT_BATTERY'),
     };
     // Update cache
     this.cachedConfig = config;
@@ -577,6 +581,15 @@ export class BLEConfigService {
    */
   async readBatteryLevel(): Promise<number> {
     return await this.readUint8('BATTERY_LEVEL');
+  }
+
+  /**
+   * Read current client battery level from device (for polling mode)
+   * Returns 0% if no client is connected (dual-device mode)
+   * @returns Client battery level (0-100)
+   */
+  async readClientBatteryLevel(): Promise<number> {
+    return await this.readUint8('CLIENT_BATTERY');
   }
 
   /**
