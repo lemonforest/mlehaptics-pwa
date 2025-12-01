@@ -101,7 +101,12 @@ export const PresetManager: React.FC<PresetManagerProps> = ({ open, onClose, con
         mode: config.mode,
         customFrequency: config.customFrequency,
         customDutyCycle: config.customDutyCycle,
-        pwmIntensity: config.pwmIntensity,
+        // Per-mode intensity settings
+        mode0Intensity: config.mode0Intensity,
+        mode1Intensity: config.mode1Intensity,
+        mode2Intensity: config.mode2Intensity,
+        mode3Intensity: config.mode3Intensity,
+        mode4Intensity: config.mode4Intensity,
         ledEnable: config.ledEnable,
         ledColorMode: config.ledColorMode,
         ledPaletteIndex: config.ledPaletteIndex,
@@ -143,7 +148,7 @@ export const PresetManager: React.FC<PresetManagerProps> = ({ open, onClose, con
 
       // Apply all settings to device with progress tracking
       const config = preset.config;
-      const totalSteps = 10;
+      const totalSteps = 14; // Increased for 5 mode intensities
 
       await bleConfigService.setMotorMode(config.mode);
       setLoadProgress((1 / totalSteps) * 100);
@@ -154,23 +159,36 @@ export const PresetManager: React.FC<PresetManagerProps> = ({ open, onClose, con
       await bleConfigService.setCustomDutyCycle(config.customDutyCycle);
       setLoadProgress((3 / totalSteps) * 100);
 
-      await bleConfigService.setPWMIntensity(config.pwmIntensity);
+      // Set all per-mode intensities
+      await bleConfigService.setModeIntensity(0, config.mode0Intensity);
       setLoadProgress((4 / totalSteps) * 100);
 
-      await bleConfigService.setLEDEnable(config.ledEnable);
+      await bleConfigService.setModeIntensity(1, config.mode1Intensity);
       setLoadProgress((5 / totalSteps) * 100);
 
-      await bleConfigService.setLEDColorMode(config.ledColorMode);
+      await bleConfigService.setModeIntensity(2, config.mode2Intensity);
       setLoadProgress((6 / totalSteps) * 100);
 
-      await bleConfigService.setLEDPaletteIndex(config.ledPaletteIndex);
+      await bleConfigService.setModeIntensity(3, config.mode3Intensity);
       setLoadProgress((7 / totalSteps) * 100);
 
-      await bleConfigService.setLEDCustomRGB(config.ledCustomRGB);
+      await bleConfigService.setModeIntensity(4, config.mode4Intensity);
       setLoadProgress((8 / totalSteps) * 100);
 
-      await bleConfigService.setLEDBrightness(config.ledBrightness);
+      await bleConfigService.setLEDEnable(config.ledEnable);
       setLoadProgress((9 / totalSteps) * 100);
+
+      await bleConfigService.setLEDColorMode(config.ledColorMode);
+      setLoadProgress((10 / totalSteps) * 100);
+
+      await bleConfigService.setLEDPaletteIndex(config.ledPaletteIndex);
+      setLoadProgress((11 / totalSteps) * 100);
+
+      await bleConfigService.setLEDCustomRGB(config.ledCustomRGB);
+      setLoadProgress((12 / totalSteps) * 100);
+
+      await bleConfigService.setLEDBrightness(config.ledBrightness);
+      setLoadProgress((13 / totalSteps) * 100);
 
       await bleConfigService.setSessionDuration(config.sessionDuration);
       setLoadProgress(100);

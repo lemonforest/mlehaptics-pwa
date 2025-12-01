@@ -11,13 +11,17 @@
 // Service UUID (XX byte = 02 for Configuration Service, YY = 00)
 export const CONFIG_SERVICE_UUID = '4bcae9be-9829-4f0a-9e88-267de5e70200';
 
-// Characteristic UUIDs (YY byte increments: 01, 02, 03... 0C)
+// Characteristic UUIDs (YY byte increments: 01, 02, 03... 0C, then 0E-11 for mode intensities)
 export const CHARACTERISTICS = {
   // MOTOR CONTROL GROUP
   MODE: '4bcae9be-9829-4f0a-9e88-267de5e70201',
   CUSTOM_FREQUENCY: '4bcae9be-9829-4f0a-9e88-267de5e70202',
   CUSTOM_DUTY_CYCLE: '4bcae9be-9829-4f0a-9e88-267de5e70203',
-  PWM_INTENSITY: '4bcae9be-9829-4f0a-9e88-267de5e70204',
+  MODE_4_INTENSITY: '4bcae9be-9829-4f0a-9e88-267de5e70204', // Custom mode: 30-80%
+  MODE_0_INTENSITY: '4bcae9be-9829-4f0a-9e88-267de5e7020e', // 0.5Hz preset: 50-80%
+  MODE_1_INTENSITY: '4bcae9be-9829-4f0a-9e88-267de5e7020f', // 1.0Hz preset: 50-80%
+  MODE_2_INTENSITY: '4bcae9be-9829-4f0a-9e88-267de5e70210', // 1.5Hz preset: 70-90%
+  MODE_3_INTENSITY: '4bcae9be-9829-4f0a-9e88-267de5e70211', // 2.0Hz preset: 70-90%
 
   // LED CONTROL GROUP
   LED_ENABLE: '4bcae9be-9829-4f0a-9e88-267de5e70205',
@@ -74,8 +78,13 @@ export interface DeviceConfig {
   // Motor Control
   mode: MotorMode;
   customFrequency: number; // Hz × 100 (25-200 = 0.25-2.0 Hz)
-  customDutyCycle: number; // 10-50%
-  pwmIntensity: number; // 0-80% (0% = LED-only mode)
+  customDutyCycle: number; // 10-100%
+  // Per-mode PWM intensity settings
+  mode0Intensity: number; // 50-80% (0.5Hz preset)
+  mode1Intensity: number; // 50-80% (1.0Hz preset)
+  mode2Intensity: number; // 70-90% (1.5Hz preset)
+  mode3Intensity: number; // 70-90% (2.0Hz preset)
+  mode4Intensity: number; // 30-80% (Custom mode)
 
   // LED Control
   ledEnable: boolean;
@@ -366,7 +375,11 @@ export class BLEConfigService {
       case 'CLIENT_BATTERY':
       case 'MODE':
       case 'CUSTOM_DUTY_CYCLE':
-      case 'PWM_INTENSITY':
+      case 'MODE_0_INTENSITY':
+      case 'MODE_1_INTENSITY':
+      case 'MODE_2_INTENSITY':
+      case 'MODE_3_INTENSITY':
+      case 'MODE_4_INTENSITY':
       case 'LED_ENABLE':
       case 'LED_COLOR_MODE':
       case 'LED_PALETTE_INDEX':
@@ -503,7 +516,12 @@ export class BLEConfigService {
       mode: await this.readUint8('MODE') as MotorMode,
       customFrequency: await this.readUint16('CUSTOM_FREQUENCY'),
       customDutyCycle: await this.readUint8('CUSTOM_DUTY_CYCLE'),
-      pwmIntensity: await this.readUint8('PWM_INTENSITY'),
+      // Per-mode intensity settings
+      mode0Intensity: await this.readUint8('MODE_0_INTENSITY'),
+      mode1Intensity: await this.readUint8('MODE_1_INTENSITY'),
+      mode2Intensity: await this.readUint8('MODE_2_INTENSITY'),
+      mode3Intensity: await this.readUint8('MODE_3_INTENSITY'),
+      mode4Intensity: await this.readUint8('MODE_4_INTENSITY'),
       ledEnable: (await this.readUint8('LED_ENABLE')) === 1,
       ledColorMode: await this.readUint8('LED_COLOR_MODE'),
       ledPaletteIndex: await this.readUint8('LED_PALETTE_INDEX'),
@@ -539,8 +557,9 @@ export class BLEConfigService {
     await this.writeUint8('CUSTOM_DUTY_CYCLE', duty);
   }
 
-  async setPWMIntensity(intensity: number): Promise<void> {
-    await this.writeUint8('PWM_INTENSITY', intensity);
+  async setModeIntensity(mode: MotorMode, intensity: number): Promise<void> {
+    const charKey = `MODE_${mode}_INTENSITY`;
+    await this.writeUint8(charKey, intensity);
   }
 
   async setLEDEnable(enable: boolean): Promise<void> {

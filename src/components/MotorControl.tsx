@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -22,6 +22,39 @@ interface MotorControlProps {
   onModeChange?: (mode: MotorMode) => void;
 }
 
+// Mode intensity range configuration
+const MODE_INTENSITY_RANGES: Record<MotorMode, { min: number; max: number }> = {
+  [MotorMode.MODE_05HZ_25]: { min: 50, max: 80 },
+  [MotorMode.MODE_1HZ_25]: { min: 50, max: 80 },
+  [MotorMode.MODE_15HZ_25]: { min: 70, max: 90 },
+  [MotorMode.MODE_2HZ_25]: { min: 70, max: 90 },
+  [MotorMode.MODE_CUSTOM]: { min: 30, max: 80 },
+};
+
+// Generic logarithmic scale helpers for percentage-based sliders
+const createLogScaleHelpers = (minVal: number, maxVal: number) => {
+  const minLog = Math.log2(minVal);
+  const maxLog = Math.log2(maxVal);
+
+  return {
+    valueToSlider: (val: number): number => {
+      // Clamp value to valid range
+      const clamped = Math.max(minVal, Math.min(maxVal, val));
+      return ((Math.log2(clamped) - minLog) / (maxLog - minLog)) * 100;
+    },
+    sliderToValue: (sliderVal: number): number => {
+      const val = Math.pow(2, minLog + (sliderVal / 100) * (maxLog - minLog));
+      return Math.round(val);
+    },
+  };
+};
+
+// Pre-computed log scale helpers for frequency (25-200)
+const freqLogScale = createLogScaleHelpers(25, 200);
+
+// Pre-computed log scale helpers for duty cycle (10-100)
+const dutyLogScale = createLogScaleHelpers(10, 100);
+
 export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeChange }) => {
   const { settings } = usePWASettings();
   const compactMode = settings.ui.compactMode;
@@ -30,8 +63,25 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
   const [mode, setMode] = useState<MotorMode>(MotorMode.MODE_05HZ_25);
   const [customFrequency, setCustomFrequency] = useState(100); // 1.00 Hz
   const [customDutyCycle, setCustomDutyCycle] = useState(50);
-  const [pwmIntensity, setPWMIntensity] = useState(75);
+  // Per-mode intensity state
+  const [modeIntensities, setModeIntensities] = useState<Record<MotorMode, number>>({
+    [MotorMode.MODE_05HZ_25]: 65,
+    [MotorMode.MODE_1HZ_25]: 65,
+    [MotorMode.MODE_15HZ_25]: 80,
+    [MotorMode.MODE_2HZ_25]: 80,
+    [MotorMode.MODE_CUSTOM]: 55,
+  });
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
+
+  // Get current mode's intensity range and log scale helpers
+  const currentIntensityRange = MODE_INTENSITY_RANGES[mode];
+  const intensityLogScale = useMemo(
+    () => createLogScaleHelpers(currentIntensityRange.min, currentIntensityRange.max),
+    [currentIntensityRange.min, currentIntensityRange.max]
+  );
+
+  // Current mode's intensity value
+  const currentIntensity = modeIntensities[mode];
 
   // Debounced BLE sends for sliders (pause-to-send functionality)
   const frequencyDebounce = useDebouncedBLESend(
@@ -52,11 +102,11 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
     }
   );
 
-  const pwmIntensityDebounce = useDebouncedBLESend(
-    pwmIntensity,
+  const intensityDebounce = useDebouncedBLESend(
+    currentIntensity,
     async (intensity) => {
       if (connected) {
-        await bleConfigService.setPWMIntensity(intensity);
+        await bleConfigService.setModeIntensity(mode, intensity);
       }
     }
   );
@@ -78,7 +128,13 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
         setMode(config.mode);
         setCustomFrequency(config.customFrequency);
         setCustomDutyCycle(config.customDutyCycle);
-        setPWMIntensity(config.pwmIntensity);
+        setModeIntensities({
+          [MotorMode.MODE_05HZ_25]: config.mode0Intensity,
+          [MotorMode.MODE_1HZ_25]: config.mode1Intensity,
+          [MotorMode.MODE_15HZ_25]: config.mode2Intensity,
+          [MotorMode.MODE_2HZ_25]: config.mode3Intensity,
+          [MotorMode.MODE_CUSTOM]: config.mode4Intensity,
+        });
         onModeChange?.(config.mode);
       });
 
@@ -106,7 +162,13 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
       setMode(config.mode);
       setCustomFrequency(config.customFrequency);
       setCustomDutyCycle(config.customDutyCycle);
-      setPWMIntensity(config.pwmIntensity);
+      setModeIntensities({
+        [MotorMode.MODE_05HZ_25]: config.mode0Intensity,
+        [MotorMode.MODE_1HZ_25]: config.mode1Intensity,
+        [MotorMode.MODE_15HZ_25]: config.mode2Intensity,
+        [MotorMode.MODE_2HZ_25]: config.mode3Intensity,
+        [MotorMode.MODE_CUSTOM]: config.mode4Intensity,
+      });
       onModeChange?.(config.mode);
     } catch (error) {
       console.error('Failed to load motor config:', error);
@@ -126,38 +188,17 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
     }
   };
 
-  // Helper functions for logarithmic frequency scaling
-  const freqToSliderValue = (freq: number): number => {
-    // Map frequency (25-200) to slider position (0-100) logarithmically
-    const minFreq = 25;  // 0.25 Hz × 100
-    const maxFreq = 200; // 2.0 Hz × 100
-    const minLog = Math.log2(minFreq);
-    const maxLog = Math.log2(maxFreq);
-    return ((Math.log2(freq) - minLog) / (maxLog - minLog)) * 100;
-  };
-
-  const sliderValueToFreq = (sliderValue: number): number => {
-    // Map slider position (0-100) to frequency (25-200) logarithmically
-    const minFreq = 25;  // 0.25 Hz × 100
-    const maxFreq = 200; // 2.0 Hz × 100
-    const minLog = Math.log2(minFreq);
-    const maxLog = Math.log2(maxFreq);
-    const freq = Math.pow(2, minLog + (sliderValue / 100) * (maxLog - minLog));
-    return Math.round(freq);
-  };
-
-  // Update local state immediately for responsive UI
+  // Frequency handlers (logarithmic)
   const handleFrequencyChange = (_: Event, value: number | number[]) => {
     const sliderValue = value as number;
-    const freq = sliderValueToFreq(sliderValue);
+    const freq = freqLogScale.sliderToValue(sliderValue);
     setCustomFrequency(freq);
   };
 
-  // Send to BLE only when user releases slider
   const handleFrequencyCommitted = async (_: Event | React.SyntheticEvent, value: number | number[]) => {
-    frequencyDebounce.onInteractionEnd(); // Cancel debounced send
+    frequencyDebounce.onInteractionEnd();
     const sliderValue = value as number;
-    const freq = sliderValueToFreq(sliderValue);
+    const freq = freqLogScale.sliderToValue(sliderValue);
     if (connected) {
       try {
         await bleConfigService.setCustomFrequency(freq);
@@ -167,16 +208,17 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
     }
   };
 
-  // Update local state immediately for responsive UI
+  // Duty cycle handlers (logarithmic)
   const handleDutyCycleChange = (_: Event, value: number | number[]) => {
-    const duty = value as number;
+    const sliderValue = value as number;
+    const duty = dutyLogScale.sliderToValue(sliderValue);
     setCustomDutyCycle(duty);
   };
 
-  // Send to BLE only when user releases slider
   const handleDutyCycleCommitted = async (_: Event | React.SyntheticEvent, value: number | number[]) => {
-    dutyCycleDebounce.onInteractionEnd(); // Cancel debounced send
-    const duty = value as number;
+    dutyCycleDebounce.onInteractionEnd();
+    const sliderValue = value as number;
+    const duty = dutyLogScale.sliderToValue(sliderValue);
     if (connected) {
       try {
         await bleConfigService.setCustomDutyCycle(duty);
@@ -186,24 +228,36 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
     }
   };
 
-  // Update local state immediately for responsive UI
-  const handlePWMIntensityChange = (_: Event, value: number | number[]) => {
-    const intensity = value as number;
-    setPWMIntensity(intensity);
+  // Intensity handlers (logarithmic, mode-specific)
+  const handleIntensityChange = (_: Event, value: number | number[]) => {
+    const sliderValue = value as number;
+    const intensity = intensityLogScale.sliderToValue(sliderValue);
+    setModeIntensities(prev => ({ ...prev, [mode]: intensity }));
   };
 
-  // Send to BLE only when user releases slider
-  const handlePWMIntensityCommitted = async (_: Event | React.SyntheticEvent, value: number | number[]) => {
-    pwmIntensityDebounce.onInteractionEnd(); // Cancel debounced send
-    const intensity = value as number;
+  const handleIntensityCommitted = async (_: Event | React.SyntheticEvent, value: number | number[]) => {
+    intensityDebounce.onInteractionEnd();
+    const sliderValue = value as number;
+    const intensity = intensityLogScale.sliderToValue(sliderValue);
     if (connected) {
       try {
-        await bleConfigService.setPWMIntensity(intensity);
+        await bleConfigService.setModeIntensity(mode, intensity);
       } catch (error) {
-        console.error('Failed to set PWM intensity:', error);
+        console.error('Failed to set intensity:', error);
       }
     }
   };
+
+  // Generate marks for intensity slider based on current mode's range
+  const intensityMarks = useMemo(() => {
+    const { min, max } = currentIntensityRange;
+    const mid = Math.round((min + max) / 2);
+    return [
+      { value: intensityLogScale.valueToSlider(min), label: `${min}%` },
+      { value: intensityLogScale.valueToSlider(mid), label: `${mid}%` },
+      { value: intensityLogScale.valueToSlider(max), label: `${max}%` },
+    ];
+  }, [currentIntensityRange, intensityLogScale]);
 
   return (
     <Card>
@@ -238,7 +292,7 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
                 </Typography>
                 <Box sx={{ px: compactMode ? 1 : 2, py: compactMode ? 2 : 3 }}>
                   <Slider
-                    value={freqToSliderValue(customFrequency)}
+                    value={freqLogScale.valueToSlider(customFrequency)}
                     onChange={handleFrequencyChange}
                     onChangeCommitted={handleFrequencyCommitted}
                     onMouseDown={frequencyDebounce.onInteractionStart}
@@ -247,14 +301,14 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
                     max={100}
                     step={0.1}
                     marks={[
-                      { value: freqToSliderValue(25), label: '0.25 Hz' },
-                      { value: freqToSliderValue(50), label: '0.5 Hz' },
-                      { value: freqToSliderValue(100), label: '1.0 Hz' },
-                      { value: freqToSliderValue(200), label: '2.0 Hz' },
+                      { value: freqLogScale.valueToSlider(25), label: '0.25 Hz' },
+                      { value: freqLogScale.valueToSlider(50), label: '0.5 Hz' },
+                      { value: freqLogScale.valueToSlider(100), label: '1.0 Hz' },
+                      { value: freqLogScale.valueToSlider(200), label: '2.0 Hz' },
                     ]}
                     disabled={!connected}
                     valueLabelDisplay="auto"
-                    valueLabelFormat={(value) => `${(sliderValueToFreq(value) / 100).toFixed(2)} Hz`}
+                    valueLabelFormat={(value) => `${(freqLogScale.sliderToValue(value) / 100).toFixed(2)} Hz`}
                     sx={{ touchAction: 'none' }}
                   />
                 </Box>
@@ -266,22 +320,22 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
                 </Typography>
                 <Box sx={{ px: compactMode ? 1 : 2, py: compactMode ? 2 : 3 }}>
                   <Slider
-                    value={customDutyCycle}
+                    value={dutyLogScale.valueToSlider(customDutyCycle)}
                     onChange={handleDutyCycleChange}
                     onChangeCommitted={handleDutyCycleCommitted}
                     onMouseDown={dutyCycleDebounce.onInteractionStart}
                     onTouchStart={dutyCycleDebounce.onInteractionStart}
-                    min={10}
+                    min={0}
                     max={100}
-                    step={1}
+                    step={0.1}
                     marks={[
-                      { value: 10, label: '10%' },
-                      { value: 50, label: '50%' },
-                      { value: 100, label: '100%' },
+                      { value: dutyLogScale.valueToSlider(10), label: '10%' },
+                      { value: dutyLogScale.valueToSlider(32), label: '32%' },
+                      { value: dutyLogScale.valueToSlider(100), label: '100%' },
                     ]}
                     disabled={!connected}
                     valueLabelDisplay="auto"
-                    valueLabelFormat={(value) => `${value}%`}
+                    valueLabelFormat={(value) => `${dutyLogScale.sliderToValue(value)}%`}
                     sx={{ touchAction: 'none' }}
                   />
                 </Box>
@@ -291,31 +345,27 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
 
           <Grid item xs={12}>
             <Typography gutterBottom>
-              PWM Intensity: {pwmIntensity}% {pwmIntensity === 0 && '(LED-only)'}
+              Intensity: {currentIntensity}%
             </Typography>
             <Box sx={{ px: compactMode ? 1 : 2, py: compactMode ? 2 : 3 }}>
               <Slider
-                value={pwmIntensity}
-                onChange={handlePWMIntensityChange}
-                onChangeCommitted={handlePWMIntensityCommitted}
-                onMouseDown={pwmIntensityDebounce.onInteractionStart}
-                onTouchStart={pwmIntensityDebounce.onInteractionStart}
+                value={intensityLogScale.valueToSlider(currentIntensity)}
+                onChange={handleIntensityChange}
+                onChangeCommitted={handleIntensityCommitted}
+                onMouseDown={intensityDebounce.onInteractionStart}
+                onTouchStart={intensityDebounce.onInteractionStart}
                 min={0}
-                max={80}
-                step={1}
-                marks={[
-                  { value: 0, label: '0% (LED-only)' },
-                  { value: 40, label: '40%' },
-                  { value: 80, label: '80%' },
-                ]}
+                max={100}
+                step={0.1}
+                marks={intensityMarks}
                 disabled={!connected}
                 valueLabelDisplay="auto"
-                valueLabelFormat={(value) => `${value}%`}
+                valueLabelFormat={(value) => `${intensityLogScale.sliderToValue(value)}%`}
                 sx={{ touchAction: 'none' }}
               />
             </Box>
             <Typography variant="caption" color="text.secondary">
-              Motor power (0% = LED-only mode, 1-80% = motor + LED)
+              Motor power for {MOTOR_MODE_LABELS[mode]} mode ({currentIntensityRange.min}-{currentIntensityRange.max}%)
             </Typography>
           </Grid>
         </Grid>

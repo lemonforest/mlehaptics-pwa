@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.5.0] - 2025-12-01
+
+### Added
+- **Per-mode PWM intensity**: Each motor mode now has its own intensity setting
+  - Mode 0 (0.5Hz): 50-80% range
+  - Mode 1 (1.0Hz): 50-80% range
+  - Mode 2 (1.5Hz): 70-90% range
+  - Mode 3 (2.0Hz): 70-90% range
+  - Mode 4 (Custom): 30-80% range
+- Intensity slider now dynamically adjusts to the selected mode's range
+
+### Changed
+- **Logarithmic sliders**: All motor control sliders (frequency, duty cycle, intensity) now use logarithmic scaling for finer control at lower values
+- Removed global PWM intensity in favor of per-mode intensity settings
+
+### Technical
+- Added 4 new BLE characteristics for mode-specific intensities (0x020E-0x0211)
+- Renamed `PWM_INTENSITY` (0x0204) to `MODE_4_INTENSITY` for clarity
+- Updated `DeviceConfig` interface with per-mode intensity fields
+- Updated preset system to save/load all 5 mode intensities
+- Added `setModeIntensity(mode, intensity)` method to BLE service
+
 ## [2.4.1] - 2025-11-25
 
 ### Added
@@ -292,7 +314,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - BLE Configuration Service UUID: `6E400002-B5A3-F393-E0A9-E50E24DCCA9E`
 - 12 BLE characteristics for motor, LED, and session control
 
-[unreleased]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.4.0...HEAD
+[unreleased]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.5.0...HEAD
+[2.5.0]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.4.1...v2.5.0
+[2.4.1]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.3.1...v2.4.0
 [2.3.1]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.2.0...v2.3.0
