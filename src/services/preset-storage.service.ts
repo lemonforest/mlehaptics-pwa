@@ -27,7 +27,12 @@ const DEFAULT_PRESETS: Omit<DevicePreset, 'id' | 'createdAt'>[] = [
       mode: MotorMode.MODE_1HZ_25,
       customFrequency: 100,
       customDutyCycle: 50,
-      pwmIntensity: 55,
+      // Per-mode intensity defaults
+      mode0Intensity: 65,
+      mode1Intensity: 65,
+      mode2Intensity: 80,
+      mode3Intensity: 80,
+      mode4Intensity: 55,
       ledEnable: true,
       ledColorMode: 0,
       ledPaletteIndex: 2, // Blue
@@ -42,7 +47,12 @@ const DEFAULT_PRESETS: Omit<DevicePreset, 'id' | 'createdAt'>[] = [
       mode: MotorMode.MODE_05HZ_25,
       customFrequency: 50,
       customDutyCycle: 25,
-      pwmIntensity: 30,
+      // Per-mode intensity - lower values for gentle mode
+      mode0Intensity: 50,
+      mode1Intensity: 50,
+      mode2Intensity: 70,
+      mode3Intensity: 70,
+      mode4Intensity: 30,
       ledEnable: true,
       ledColorMode: 0,
       ledPaletteIndex: 1, // Green
@@ -57,7 +67,12 @@ const DEFAULT_PRESETS: Omit<DevicePreset, 'id' | 'createdAt'>[] = [
       mode: MotorMode.MODE_2HZ_25,
       customFrequency: 200,
       customDutyCycle: 50,
-      pwmIntensity: 80,
+      // Per-mode intensity - higher values for intense mode
+      mode0Intensity: 80,
+      mode1Intensity: 80,
+      mode2Intensity: 90,
+      mode3Intensity: 90,
+      mode4Intensity: 80,
       ledEnable: true,
       ledColorMode: 0,
       ledPaletteIndex: 0, // Red
@@ -321,12 +336,20 @@ export class PresetStorageService {
       errors.push(`Custom duty cycle must be between ${PRESET_VALIDATION_BOUNDS.customDutyCycle.min}% and ${PRESET_VALIDATION_BOUNDS.customDutyCycle.max}%`);
     }
 
-    // Validate PWM intensity
-    if (
-      config.pwmIntensity < PRESET_VALIDATION_BOUNDS.pwmIntensity.min ||
-      config.pwmIntensity > PRESET_VALIDATION_BOUNDS.pwmIntensity.max
-    ) {
-      errors.push(`PWM intensity must be between ${PRESET_VALIDATION_BOUNDS.pwmIntensity.min}% and ${PRESET_VALIDATION_BOUNDS.pwmIntensity.max}%`);
+    // Validate per-mode intensities
+    const modeIntensityFields = [
+      { field: 'mode0Intensity', bounds: PRESET_VALIDATION_BOUNDS.mode0Intensity, label: 'Mode 0 (0.5Hz)' },
+      { field: 'mode1Intensity', bounds: PRESET_VALIDATION_BOUNDS.mode1Intensity, label: 'Mode 1 (1.0Hz)' },
+      { field: 'mode2Intensity', bounds: PRESET_VALIDATION_BOUNDS.mode2Intensity, label: 'Mode 2 (1.5Hz)' },
+      { field: 'mode3Intensity', bounds: PRESET_VALIDATION_BOUNDS.mode3Intensity, label: 'Mode 3 (2.0Hz)' },
+      { field: 'mode4Intensity', bounds: PRESET_VALIDATION_BOUNDS.mode4Intensity, label: 'Mode 4 (Custom)' },
+    ] as const;
+
+    for (const { field, bounds, label } of modeIntensityFields) {
+      const value = config[field];
+      if (value < bounds.min || value > bounds.max) {
+        errors.push(`${label} intensity must be between ${bounds.min}% and ${bounds.max}%`);
+      }
     }
 
     // Validate LED color mode
