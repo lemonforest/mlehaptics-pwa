@@ -35,6 +35,10 @@ export const CHARACTERISTICS = {
   SESSION_TIME: '4bcae9be-9829-4f0a-9e88-267de5e7020b',
   BATTERY_LEVEL: '4bcae9be-9829-4f0a-9e88-267de5e7020c',
   CLIENT_BATTERY: '4bcae9be-9829-4f0a-9e88-267de5e7020d',
+
+  // FIRMWARE VERSION GROUP
+  LOCAL_FIRMWARE_VERSION: '4bcae9be-9829-4f0a-9e88-267de5e70212',
+  PEER_FIRMWARE_VERSION: '4bcae9be-9829-4f0a-9e88-267de5e70213',
 } as const;
 
 // Motor modes (AD032 - Updated specification)
@@ -98,6 +102,10 @@ export interface DeviceConfig {
   sessionTime: number; // Elapsed seconds (read-only)
   batteryLevel: number; // 0-100% (read-only)
   clientBatteryLevel: number; // 0-100% (read-only, 0 if no client connected)
+
+  // Firmware Version (read-only)
+  localFirmwareVersion: string; // e.g., "vMAJOR.MINOR.PATCH (MMM DD YYYY HH:MM:SS)"
+  peerFirmwareVersion: string; // Same format, empty if no peer connected
 }
 
 export interface ScanOptions {
@@ -475,6 +483,15 @@ export class BLEConfigService {
     return [value.getUint8(0), value.getUint8(1), value.getUint8(2)];
   }
 
+  async readString(charKey: string): Promise<string> {
+    const char = this.characteristics.get(charKey);
+    if (!char) throw new Error(`Characteristic ${charKey} not found`);
+
+    const value = await char.readValue();
+    const decoder = new TextDecoder('utf-8');
+    return decoder.decode(value.buffer).replace(/\0/g, '').trim();
+  }
+
   // Write operations
   async writeUint8(charKey: string, value: number): Promise<void> {
     const char = this.characteristics.get(charKey);
@@ -531,6 +548,9 @@ export class BLEConfigService {
       sessionTime: await this.readUint32('SESSION_TIME'),
       batteryLevel: await this.readUint8('BATTERY_LEVEL'),
       clientBatteryLevel: await this.readUint8('CLIENT_BATTERY'),
+      // Firmware versions (graceful fallback if not supported by older firmware)
+      localFirmwareVersion: await this.readFirmwareVersion('LOCAL_FIRMWARE_VERSION'),
+      peerFirmwareVersion: await this.readFirmwareVersion('PEER_FIRMWARE_VERSION'),
     };
     // Update cache
     this.cachedConfig = config;
@@ -539,6 +559,18 @@ export class BLEConfigService {
     this.configChangeListeners.forEach(listener => listener(config));
 
     return config;
+  }
+
+  /**
+   * Read firmware version string with graceful fallback for older firmware
+   */
+  private async readFirmwareVersion(charKey: string): Promise<string> {
+    try {
+      return await this.readString(charKey);
+    } catch (error) {
+      console.warn(`Firmware version characteristic ${charKey} not available:`, error);
+      return '';
+    }
   }
 
   getCachedConfig(): DeviceConfig | null {
@@ -609,6 +641,22 @@ export class BLEConfigService {
    */
   async readClientBatteryLevel(): Promise<number> {
     return await this.readUint8('CLIENT_BATTERY');
+  }
+
+  /**
+   * Read local device firmware version
+   * @returns Firmware version string (e.g., "v1.0.0 (Dec 15 2025 10:30:00)")
+   */
+  async readLocalFirmwareVersion(): Promise<string> {
+    return await this.readFirmwareVersion('LOCAL_FIRMWARE_VERSION');
+  }
+
+  /**
+   * Read peer device firmware version (for dual-device mode)
+   * @returns Firmware version string or empty if no peer connected
+   */
+  async readPeerFirmwareVersion(): Promise<string> {
+    return await this.readFirmwareVersion('PEER_FIRMWARE_VERSION');
   }
 
   /**

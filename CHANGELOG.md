@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.6.0] - 2025-12-16
+
+### Added
+- **LED-Only Mode**: Toggle switch in Custom mode (Mode 4) to disable motors for visual-only LED feedback
+  - Sets PWM intensity to 0% when enabled
+  - Remembers previous intensity setting for restoration
+  - Uses 55% default if previous intensity unknown (e.g., device was already in LED-only mode)
+- **Firmware Version Display**: Read and display device firmware version information
+  - Local device firmware version (e.g., "v1.0.0 (Dec 15 2025 10:30:00)")
+  - Peer device firmware version for dual-device mode (empty if no peer connected)
+  - Graceful fallback for older firmware without version characteristics
+
+### Changed
+- Mode 4 (Custom) intensity range now includes 0% for LED-only mode (0, 30-80%)
+- Updated AD032 documentation links to point directly to the specification file
+
+### Technical
+- Added 2 new BLE characteristics for firmware versions (0x0212, 0x0213)
+- Added `readString()` method to BLE service for string characteristic reads
+- Added `readLocalFirmwareVersion()` and `readPeerFirmwareVersion()` methods
+- Added LED-only toggle state management with intensity memory in MotorControl
+
 ## [2.5.0] - 2025-12-01
 
 ### Added
@@ -314,7 +336,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - BLE Configuration Service UUID: `6E400002-B5A3-F393-E0A9-E50E24DCCA9E`
 - 12 BLE characteristics for motor, LED, and session control
 
-[unreleased]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.5.0...HEAD
+[unreleased]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.6.0...HEAD
+[2.6.0]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.4.1...v2.5.0
 [2.4.1]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.3.1...v2.4.0

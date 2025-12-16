@@ -12,6 +12,8 @@ import {
   Box,
   Snackbar,
   Alert,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import { MotorMode, MOTOR_MODE_LABELS, bleConfigService } from '../services/ble-config.service';
 import { useDebouncedBLESend } from '../hooks/useDebouncedBLESend';
@@ -73,6 +75,11 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
   });
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
 
+  // LED-only mode state (Mode 4 only: 0% intensity = motors off, LED only)
+  const [ledOnlyMode, setLedOnlyMode] = useState(false);
+  // Saved intensity for restoring when exiting LED-only mode (default 55% if unknown)
+  const [savedMode4Intensity, setSavedMode4Intensity] = useState(55);
+
   // Get current mode's intensity range and log scale helpers
   const currentIntensityRange = MODE_INTENSITY_RANGES[mode];
   const intensityLogScale = useMemo(
@@ -128,12 +135,23 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
         setMode(config.mode);
         setCustomFrequency(config.customFrequency);
         setCustomDutyCycle(config.customDutyCycle);
+
+        // Detect LED-only mode for Mode 4 (intensity = 0)
+        const isLedOnly = config.mode4Intensity === 0;
+        setLedOnlyMode(isLedOnly);
+
+        // Save intensity for LED-only toggle restoration
+        if (!isLedOnly && config.mode4Intensity >= 30) {
+          setSavedMode4Intensity(config.mode4Intensity);
+        }
+
         setModeIntensities({
           [MotorMode.MODE_05HZ_25]: config.mode0Intensity,
           [MotorMode.MODE_1HZ_25]: config.mode1Intensity,
           [MotorMode.MODE_15HZ_25]: config.mode2Intensity,
           [MotorMode.MODE_2HZ_25]: config.mode3Intensity,
-          [MotorMode.MODE_CUSTOM]: config.mode4Intensity,
+          // For Mode 4, if LED-only (0%), show saved intensity in UI
+          [MotorMode.MODE_CUSTOM]: isLedOnly ? savedMode4Intensity : config.mode4Intensity,
         });
         onModeChange?.(config.mode);
       });
@@ -162,12 +180,28 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
       setMode(config.mode);
       setCustomFrequency(config.customFrequency);
       setCustomDutyCycle(config.customDutyCycle);
+
+      // Detect LED-only mode for Mode 4 (intensity = 0)
+      const isLedOnly = config.mode4Intensity === 0;
+      setLedOnlyMode(isLedOnly);
+
+      // If in LED-only mode, use default intensity for the slider display
+      // Otherwise, save the current intensity for potential LED-only toggle
+      if (isLedOnly) {
+        // Device was in LED-only mode; keep saved intensity at default
+        setSavedMode4Intensity(55);
+      } else if (config.mode4Intensity >= 30) {
+        // Save the current valid intensity
+        setSavedMode4Intensity(config.mode4Intensity);
+      }
+
       setModeIntensities({
         [MotorMode.MODE_05HZ_25]: config.mode0Intensity,
         [MotorMode.MODE_1HZ_25]: config.mode1Intensity,
         [MotorMode.MODE_15HZ_25]: config.mode2Intensity,
         [MotorMode.MODE_2HZ_25]: config.mode3Intensity,
-        [MotorMode.MODE_CUSTOM]: config.mode4Intensity,
+        // For Mode 4, if LED-only (0%), show saved intensity in UI
+        [MotorMode.MODE_CUSTOM]: isLedOnly ? 55 : config.mode4Intensity,
       });
       onModeChange?.(config.mode);
     } catch (error) {
@@ -184,6 +218,34 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
         await bleConfigService.setMotorMode(newMode);
       } catch (error) {
         console.error('Failed to set motor mode:', error);
+      }
+    }
+  };
+
+  // Handle LED-only mode toggle (Mode 4 only)
+  const handleLedOnlyToggle = async (enabled: boolean) => {
+    setLedOnlyMode(enabled);
+
+    if (connected) {
+      try {
+        if (enabled) {
+          // Save current intensity before switching to LED-only
+          const currentIntensity = modeIntensities[MotorMode.MODE_CUSTOM];
+          if (currentIntensity >= 30) {
+            setSavedMode4Intensity(currentIntensity);
+          }
+          // Set intensity to 0 (LED-only mode)
+          await bleConfigService.setModeIntensity(MotorMode.MODE_CUSTOM, 0);
+        } else {
+          // Restore previous intensity (or default 55%)
+          const restoreIntensity = savedMode4Intensity >= 30 ? savedMode4Intensity : 55;
+          setModeIntensities(prev => ({ ...prev, [MotorMode.MODE_CUSTOM]: restoreIntensity }));
+          await bleConfigService.setModeIntensity(MotorMode.MODE_CUSTOM, restoreIntensity);
+        }
+      } catch (error) {
+        console.error('Failed to toggle LED-only mode:', error);
+        // Revert the toggle on error
+        setLedOnlyMode(!enabled);
       }
     }
   };
@@ -233,6 +295,11 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
     const sliderValue = value as number;
     const intensity = intensityLogScale.sliderToValue(sliderValue);
     setModeIntensities(prev => ({ ...prev, [mode]: intensity }));
+
+    // For Mode 4, save intensity for LED-only toggle restoration
+    if (mode === MotorMode.MODE_CUSTOM && intensity >= 30) {
+      setSavedMode4Intensity(intensity);
+    }
   };
 
   const handleIntensityCommitted = async (_: Event | React.SyntheticEvent, value: number | number[]) => {
@@ -344,9 +411,26 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
           )}
 
           <Grid item xs={12}>
-            <Typography gutterBottom>
-              Intensity: {currentIntensity}%
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+              <Typography>
+                Intensity: {ledOnlyMode && mode === MotorMode.MODE_CUSTOM ? '0%' : `${currentIntensity}%`}
+              </Typography>
+              {mode === MotorMode.MODE_CUSTOM && (
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={ledOnlyMode}
+                      onChange={(e) => handleLedOnlyToggle(e.target.checked)}
+                      disabled={!connected}
+                      size="small"
+                    />
+                  }
+                  label="LED Only"
+                  labelPlacement="start"
+                  sx={{ mr: 0 }}
+                />
+              )}
+            </Box>
             <Box sx={{ px: compactMode ? 1 : 2, py: compactMode ? 2 : 3 }}>
               <Slider
                 value={intensityLogScale.valueToSlider(currentIntensity)}
@@ -358,14 +442,16 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
                 max={100}
                 step={0.1}
                 marks={intensityMarks}
-                disabled={!connected}
+                disabled={!connected || (mode === MotorMode.MODE_CUSTOM && ledOnlyMode)}
                 valueLabelDisplay="auto"
                 valueLabelFormat={(value) => `${intensityLogScale.sliderToValue(value)}%`}
                 sx={{ touchAction: 'none' }}
               />
             </Box>
             <Typography variant="caption" color="text.secondary">
-              Motor power for {MOTOR_MODE_LABELS[mode]} mode ({currentIntensityRange.min}-{currentIntensityRange.max}%)
+              {mode === MotorMode.MODE_CUSTOM && ledOnlyMode
+                ? 'Motors disabled - LED visual feedback only'
+                : `Motor power for ${MOTOR_MODE_LABELS[mode]} mode (${currentIntensityRange.min}-${currentIntensityRange.max}%)`}
             </Typography>
           </Grid>
         </Grid>
