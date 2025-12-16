@@ -15,7 +15,7 @@ This document provides context and guidelines for AI assistants working with the
 - **State Management**: React hooks (no external state management library)
 
 ### Key Architecture Document
-**[AD032: BLE Configuration Service](https://github.com/lemonforest/mlehaptics/tree/main/docs/adr)** (in the ADR directory)
+**[AD032: BLE Configuration Service](https://github.com/lemonforest/mlehaptics/blob/main/docs/adr/0032-ble-configuration-service-architecture.md)**
 
 This is the **foundational specification** that defines:
 - Complete BLE service UUID structure (12 characteristics)

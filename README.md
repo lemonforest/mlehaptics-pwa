@@ -10,7 +10,7 @@ Works on Chrome, Edge, or Opera (Android/Desktop). No installation required.
 
 ## Architecture
 
-This PWA implements **[AD032: BLE Configuration Service](https://github.com/lemonforest/mlehaptics/tree/main/docs/adr)** from the [MLEHaptics embedded project](https://github.com/lemonforest/mlehaptics).
+This PWA implements **[AD032: BLE Configuration Service](https://github.com/lemonforest/mlehaptics/blob/main/docs/adr/0032-ble-configuration-service-architecture.md)** from the [MLEHaptics embedded project](https://github.com/lemonforest/mlehaptics).
 
 ## Features
 
@@ -19,9 +19,11 @@ This PWA implements **[AD032: BLE Configuration Service](https://github.com/lemo
 | Feature | Description |
 |---------|-------------|
 | **Motor Control** | 4 preset modes (0.5-2.0 Hz @ 25%) + Custom mode with adjustable frequency/duty cycle |
+| **LED-Only Mode** | Custom mode toggle to disable motors for visual-only feedback |
 | **LED Control** | 16-color palette or custom RGB, with universal brightness control (10-30%) |
 | **Session Timer** | Configurable 20-90 minute sessions with real-time progress tracking |
 | **Battery Monitor** | Live battery level with low-battery alerts |
+| **Firmware Info** | Display local and peer device firmware versions |
 
 ### App Features
 
@@ -80,7 +82,7 @@ Motor Control:
   ...70201  Mode              uint8    R/W    0-4 (preset modes + custom)
   ...70202  Custom Frequency  uint16   R/W    25-200 (0.25-2.0 Hz × 100)
   ...70203  Custom Duty Cycle uint8    R/W    10-100%
-  ...70204  PWM Intensity     uint8    R/W    0-80% (0 = LED-only)
+  ...70204  Mode 4 Intensity  uint8    R/W    0, 30-80% (0 = LED-only mode)
 
 LED Control:
   ...70205  LED Enable        uint8    R/W    0-1
@@ -93,6 +95,10 @@ Status:
   ...7020A  Session Duration  uint32   R/W    1200-5400 sec (20-90 min)
   ...7020B  Session Time      uint32   R/N    Elapsed seconds
   ...7020C  Battery Level     uint8    R/N    0-100%
+
+Firmware:
+  ...70212  Local FW Version  string   R      e.g., "v1.0.0 (Dec 15 2025 10:30:00)"
+  ...70213  Peer FW Version   string   R      Same format (empty if no peer)
 ```
 
 ### Motor Modes
@@ -173,7 +179,7 @@ npm run fetch-docs # Update local AD032 cache
 - **[CHANGELOG.md](CHANGELOG.md)** - Version history
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** - GitHub Pages deployment
 - **[CLAUDE.md](CLAUDE.md)** - AI assistant guide
-- **[AD032: BLE Configuration Service](https://github.com/lemonforest/mlehaptics/tree/main/docs/adr)** - BLE specification
+- **[AD032: BLE Configuration Service](https://github.com/lemonforest/mlehaptics/blob/main/docs/adr/0032-ble-configuration-service-architecture.md)** - BLE specification
 - **[MLEHaptics Firmware](https://github.com/lemonforest/mlehaptics)** - Embedded project
 
 ## License
