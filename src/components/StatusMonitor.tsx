@@ -30,7 +30,6 @@ interface StatusMonitorProps {
 export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected, expanded, onToggleExpanded }) => {
   const { settings } = usePWASettings();
   const compactMode = settings.ui.compactMode;
-  const showAdvancedControls = settings.ui.showAdvancedControls;
 
   const [sessionDuration, setSessionDuration] = useState(1200); // 20 min default
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
@@ -301,23 +300,14 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected, expande
             </Grid>
           )}
 
-          {connected && showAdvancedControls && localFirmwareVersion && (
+          {connected && localFirmwareVersion && (
             <Grid item xs={12}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <InfoOutlinedIcon color="action" fontSize="small" />
                 <Typography variant="body2" color="text.secondary">
-                  Firmware Version
+                  Firmware: {localFirmwareVersion}
+                  {peerFirmwareVersion && ` / Client: ${peerFirmwareVersion}`}
                 </Typography>
-              </Box>
-              <Box sx={{ pl: 4 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                  Host: {localFirmwareVersion}
-                </Typography>
-                {peerFirmwareVersion && (
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                    Client: {peerFirmwareVersion}
-                  </Typography>
-                )}
               </Box>
             </Grid>
           )}

@@ -14,8 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Collapsed view shows summary chips with current settings
   - Uses MUI Collapse component for smooth animations
   - New reusable `CollapsibleCard` component
-- **Firmware Version Display**: Now visible in Status & Monitoring when "Show Advanced Controls" is enabled
-  - Shows host device firmware version
+- **Firmware Version Display**: Always visible in Status & Monitoring section when connected
+  - Shows host device firmware version near battery info
   - Shows client (peer) device firmware version in dual-device mode
 
 ### Fixed
@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Show Advanced Controls** behavior reworked:
   - Custom Frequency and Duty Cycle sliders now always visible in Custom mode
-  - "Advanced Controls" now only controls firmware version display and advanced scan button
+  - "Advanced Controls" now only controls the advanced scan button
 - Summary chips in collapsed state show: mode, intensity, frequency, duty cycle, LED status, color, brightness, battery levels
 
 ## [2.6.0] - 2025-12-16
