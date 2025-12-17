@@ -306,7 +306,7 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected, expande
                 <InfoOutlinedIcon color="action" fontSize="small" />
                 <Typography variant="body2" color="text.secondary">
                   Firmware: {localFirmwareVersion || 'Not available'}
-                  {peerFirmwareVersion && ` / Client: ${peerFirmwareVersion}`}
+                  {clientBattery.batteryLevel > 0 && ` / Client: ${peerFirmwareVersion || 'Not available'}`}
                 </Typography>
               </Box>
             </Grid>
