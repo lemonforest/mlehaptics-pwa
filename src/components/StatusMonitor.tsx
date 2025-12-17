@@ -300,12 +300,12 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected, expande
             </Grid>
           )}
 
-          {connected && localFirmwareVersion && (
+          {connected && (
             <Grid item xs={12}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <InfoOutlinedIcon color="action" fontSize="small" />
                 <Typography variant="body2" color="text.secondary">
-                  Firmware: {localFirmwareVersion}
+                  Firmware: {localFirmwareVersion || 'Not available'}
                   {peerFirmwareVersion && ` / Client: ${peerFirmwareVersion}`}
                 </Typography>
               </Box>
