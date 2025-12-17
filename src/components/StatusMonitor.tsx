@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Card,
-  CardContent,
   Typography,
   Slider,
   Box,
@@ -16,21 +14,28 @@ import Battery80Icon from '@mui/icons-material/Battery80';
 import Battery50Icon from '@mui/icons-material/Battery50';
 import Battery20Icon from '@mui/icons-material/Battery20';
 import TimerIcon from '@mui/icons-material/Timer';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import DevicesOtherIcon from '@mui/icons-material/DevicesOther';
 import { bleConfigService } from '../services/ble-config.service';
 import { useSessionTimer } from '../hooks/useSessionTimer';
 import { useBatteryLevel } from '../hooks/useBatteryLevel';
 import { usePWASettings } from '../contexts/PWASettingsContext';
+import { CollapsibleCard } from './CollapsibleCard';
 
 interface StatusMonitorProps {
   connected: boolean;
+  expanded: boolean;
+  onToggleExpanded: () => void;
 }
 
-export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
+export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected, expanded, onToggleExpanded }) => {
   const { settings } = usePWASettings();
   const compactMode = settings.ui.compactMode;
 
   const [sessionDuration, setSessionDuration] = useState(1200); // 20 min default
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
+  const [localFirmwareVersion, setLocalFirmwareVersion] = useState('');
+  const [peerFirmwareVersion, setPeerFirmwareVersion] = useState('');
 
   // Initialize with default values
   const [initialSessionTime, setInitialSessionTime] = useState(0);
@@ -102,6 +107,8 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
       setInitialSessionTime(config.sessionTime);
       setInitialBatteryLevel(config.batteryLevel);
       setInitialClientBatteryLevel(config.clientBatteryLevel);
+      setLocalFirmwareVersion(config.localFirmwareVersion || '');
+      setPeerFirmwareVersion(config.peerFirmwareVersion || '');
 
       // Set initial values in hooks
       sessionTimer.setTime(config.sessionTime);
@@ -151,14 +158,56 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
     return <Battery20Icon />;
   };
 
-  return (
-    <Card>
-      <CardContent sx={{ py: compactMode ? 1.5 : 2, '&:last-child': { pb: compactMode ? 2 : 3 } }}>
-        <Typography variant="h6" gutterBottom>
-          Status & Monitoring
+  // Summary view for collapsed state
+  const summaryView = (
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', width: '100%' }}>
+      {/* Session progress bar - prominent for therapist glance */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 120 }}>
+        <TimerIcon sx={{ fontSize: 18, color: sessionTimer.progress >= 100 ? 'success.main' : 'text.secondary' }} />
+        <Box sx={{ flex: 1, minWidth: 60 }}>
+          <LinearProgress
+            variant="determinate"
+            value={Math.min(sessionTimer.progress, 100)}
+            color={sessionTimer.progress >= 100 ? 'success' : 'primary'}
+            sx={{ height: 8, borderRadius: 1 }}
+          />
+        </Box>
+        <Typography variant="caption" sx={{ minWidth: 70, textAlign: 'right', color: 'text.secondary' }}>
+          {formatTime(sessionTimer.sessionTime)} / {formatTime(sessionDuration)}
         </Typography>
+      </Box>
+      {/* Battery indicators */}
+      <Chip
+        icon={getBatteryIcon(battery.batteryLevel)}
+        label={`${battery.batteryLevel}%`}
+        size="small"
+        color={battery.color}
+        variant="outlined"
+      />
+      {clientBattery.batteryLevel > 0 && (
+        <Chip
+          icon={<DevicesOtherIcon sx={{ fontSize: 16 }} />}
+          label={`${clientBattery.batteryLevel}%`}
+          size="small"
+          color={clientBattery.color}
+          variant="outlined"
+        />
+      )}
+      {!connected && (
+        <Chip label="Disconnected" size="small" color="warning" variant="outlined" />
+      )}
+    </Box>
+  );
 
-        <Grid container spacing={compactMode ? 2 : 3}>
+  return (
+    <CollapsibleCard
+      title="Status & Monitoring"
+      expanded={expanded}
+      onToggle={onToggleExpanded}
+      summary={summaryView}
+      compactMode={compactMode}
+    >
+      <Grid container spacing={compactMode ? 2 : 3}>
           <Grid item xs={12}>
             <Typography gutterBottom>
               Session Duration: {formatTime(sessionDuration)} ({sessionDuration / 60} minutes)
@@ -262,6 +311,18 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
             </Grid>
           )}
 
+          {connected && (
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <InfoOutlinedIcon color="action" fontSize="small" />
+                <Typography variant="body2" color="text.secondary">
+                  Firmware: {localFirmwareVersion || 'Not available'}
+                  {clientBattery.batteryLevel > 0 && ` / Client: ${peerFirmwareVersion || 'Not available'}`}
+                </Typography>
+              </Box>
+            </Grid>
+          )}
+
           {!connected && (
             <Grid item xs={12}>
               <Box
@@ -279,7 +340,6 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
             </Grid>
           )}
         </Grid>
-      </CardContent>
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
@@ -290,6 +350,6 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected }) => {
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </Card>
+    </CollapsibleCard>
   );
 };
