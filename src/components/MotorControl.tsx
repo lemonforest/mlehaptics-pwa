@@ -1,7 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
-  Card,
-  CardContent,
   Typography,
   FormControl,
   InputLabel,
@@ -14,14 +12,19 @@ import {
   Alert,
   FormControlLabel,
   Switch,
+  Chip,
 } from '@mui/material';
 import { MotorMode, MOTOR_MODE_LABELS, bleConfigService } from '../services/ble-config.service';
 import { useDebouncedBLESend } from '../hooks/useDebouncedBLESend';
 import { usePWASettings } from '../contexts/PWASettingsContext';
+import { CollapsibleCard } from './CollapsibleCard';
 
 interface MotorControlProps {
   connected: boolean;
   onModeChange?: (mode: MotorMode) => void;
+  onLedOnlyModeChange?: (ledOnly: boolean) => void;
+  expanded: boolean;
+  onToggleExpanded: () => void;
 }
 
 // Mode intensity range configuration
@@ -57,10 +60,9 @@ const freqLogScale = createLogScaleHelpers(25, 200);
 // Pre-computed log scale helpers for duty cycle (10-100)
 const dutyLogScale = createLogScaleHelpers(10, 100);
 
-export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeChange }) => {
+export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeChange, onLedOnlyModeChange, expanded, onToggleExpanded }) => {
   const { settings } = usePWASettings();
   const compactMode = settings.ui.compactMode;
-  const showAdvancedControls = settings.ui.showAdvancedControls;
 
   const [mode, setMode] = useState<MotorMode>(MotorMode.MODE_05HZ_25);
   const [customFrequency, setCustomFrequency] = useState(100); // 1.00 Hz
@@ -79,6 +81,11 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
   const [ledOnlyMode, setLedOnlyMode] = useState(false);
   // Saved intensity for restoring when exiting LED-only mode (default 55% if unknown)
   const [savedMode4Intensity, setSavedMode4Intensity] = useState(55);
+
+  // Notify parent when ledOnlyMode changes
+  useEffect(() => {
+    onLedOnlyModeChange?.(ledOnlyMode);
+  }, [ledOnlyMode, onLedOnlyModeChange]);
 
   // Get current mode's intensity range and log scale helpers
   const currentIntensityRange = MODE_INTENSITY_RANGES[mode];
@@ -326,14 +333,33 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
     ];
   }, [currentIntensityRange, intensityLogScale]);
 
-  return (
-    <Card>
-      <CardContent sx={{ py: compactMode ? 1.5 : 2, '&:last-child': { pb: compactMode ? 2 : 3 } }}>
-        <Typography variant="h6" gutterBottom>
-          Motor Control
-        </Typography>
+  // Summary view for collapsed state
+  const summaryView = (
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+      <Chip label={MOTOR_MODE_LABELS[mode]} size="small" color="primary" variant="outlined" />
+      <Chip
+        label={ledOnlyMode && mode === MotorMode.MODE_CUSTOM ? 'LED Only' : `${currentIntensity}%`}
+        size="small"
+        color={ledOnlyMode && mode === MotorMode.MODE_CUSTOM ? 'secondary' : 'default'}
+      />
+      {mode === MotorMode.MODE_CUSTOM && (
+        <>
+          <Chip label={`${(customFrequency / 100).toFixed(2)} Hz`} size="small" variant="outlined" />
+          <Chip label={`${customDutyCycle}% duty`} size="small" variant="outlined" />
+        </>
+      )}
+    </Box>
+  );
 
-        <Grid container spacing={compactMode ? 2 : 3}>
+  return (
+    <CollapsibleCard
+      title="Motor Control"
+      expanded={expanded}
+      onToggle={onToggleExpanded}
+      summary={summaryView}
+      compactMode={compactMode}
+    >
+      <Grid container spacing={compactMode ? 2 : 3}>
           <Grid item xs={12}>
             <FormControl fullWidth disabled={!connected}>
               <InputLabel>Mode</InputLabel>
@@ -351,7 +377,7 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
             </FormControl>
           </Grid>
 
-          {mode === MotorMode.MODE_CUSTOM && showAdvancedControls && (
+          {mode === MotorMode.MODE_CUSTOM && (
             <>
               <Grid item xs={12}>
                 <Typography gutterBottom>
@@ -455,7 +481,6 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
             </Typography>
           </Grid>
         </Grid>
-      </CardContent>
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
@@ -466,6 +491,6 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </Card>
+    </CollapsibleCard>
   );
 };

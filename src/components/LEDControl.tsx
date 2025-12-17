@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Card,
-  CardContent,
   Typography,
   FormControl,
   FormControlLabel,
@@ -19,15 +17,22 @@ import {
 import { COLOR_PALETTE, bleConfigService, MotorMode, MOTOR_MODE_LABELS } from '../services/ble-config.service';
 import { useDebouncedBLESend } from '../hooks/useDebouncedBLESend';
 import { usePWASettings } from '../contexts/PWASettingsContext';
+import { CollapsibleCard } from './CollapsibleCard';
 
 interface LEDControlProps {
   connected: boolean;
   motorMode: MotorMode;
+  ledOnlyMode: boolean;
+  expanded: boolean;
+  onToggleExpanded: () => void;
 }
 
-export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) => {
+export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode, ledOnlyMode, expanded, onToggleExpanded }) => {
   const { settings } = usePWASettings();
   const compactMode = settings.ui.compactMode;
+
+  // In LED-only mode, LED must stay enabled (can't turn off - would leave device appearing broken)
+  const isLedLocked = ledOnlyMode && motorMode === MotorMode.MODE_CUSTOM;
 
   const [ledEnable, setLEDEnable] = useState(false);
   const [colorMode, setColorMode] = useState(1); // 0=palette, 1=custom RGB
@@ -57,6 +62,15 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
       }
     }
   );
+
+  // Force LED enable when in LED-only mode
+  useEffect(() => {
+    if (isLedLocked && !ledEnable && connected) {
+      // Automatically enable LED when entering LED-only mode
+      setLEDEnable(true);
+      bleConfigService.setLEDEnable(true).catch(console.error);
+    }
+  }, [isLedLocked, ledEnable, connected]);
 
   useEffect(() => {
     if (connected) {
@@ -193,14 +207,50 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
 
   const currentColor = colorMode === 0 ? COLOR_PALETTE[paletteIndex].rgb : customRGB;
 
-  return (
-    <Card>
-      <CardContent sx={{ py: compactMode ? 1.5 : 2, '&:last-child': { pb: compactMode ? 2 : 3 } }}>
-        <Typography variant="h6" gutterBottom>
-          LED Control
-        </Typography>
+  // Summary view for collapsed state
+  const summaryView = (
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+      <Chip
+        label={ledEnable ? 'On' : 'Off'}
+        size="small"
+        color={ledEnable ? 'success' : 'default'}
+        variant="outlined"
+      />
+      {ledEnable && (
+        <>
+          <Box
+            sx={{
+              width: 24,
+              height: 24,
+              borderRadius: 0.5,
+              bgcolor: rgbToHex(currentColor as [number, number, number]),
+              border: '1px solid',
+              borderColor: 'divider',
+            }}
+          />
+          <Chip
+            label={colorMode === 0 ? COLOR_PALETTE[paletteIndex].name : `RGB(${currentColor[0]}, ${currentColor[1]}, ${currentColor[2]})`}
+            size="small"
+            variant="outlined"
+          />
+          <Chip label={`${brightness}%`} size="small" variant="outlined" />
+        </>
+      )}
+      {!isCustomMode && (
+        <Chip label="Preset mode" size="small" color="info" variant="outlined" />
+      )}
+    </Box>
+  );
 
-        {!isCustomMode && (
+  return (
+    <CollapsibleCard
+      title="LED Control"
+      expanded={expanded}
+      onToggle={onToggleExpanded}
+      summary={summaryView}
+      compactMode={compactMode}
+    >
+      {!isCustomMode && (
           <Alert severity="info" sx={{ mb: compactMode ? 1 : 2 }}>
             LED settings are only available in Custom motor mode. Currently in: <strong>{MOTOR_MODE_LABELS[motorMode]}</strong>
           </Alert>
@@ -211,13 +261,18 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
             <FormControlLabel
               control={
                 <Switch
-                  checked={ledEnable}
+                  checked={isLedLocked ? true : ledEnable}
                   onChange={handleLEDEnableChange}
-                  disabled={!connected || !isCustomMode}
+                  disabled={!connected || !isCustomMode || isLedLocked}
                 />
               }
               label="LED Enable"
             />
+            {isLedLocked && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', ml: 4 }}>
+                LED cannot be disabled while in LED-only mode (motors are off)
+              </Typography>
+            )}
           </Grid>
 
           <Grid item xs={12}>
@@ -361,7 +416,6 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
             </Typography>
           </Grid>
         </Grid>
-      </CardContent>
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
@@ -372,6 +426,6 @@ export const LEDControl: React.FC<LEDControlProps> = ({ connected, motorMode }) 
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </Card>
+    </CollapsibleCard>
   );
 };

@@ -43,6 +43,7 @@ function App() {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [bluetoothAvailable, setBluetoothAvailable] = useState(true);
   const [motorMode, setMotorMode] = useState<MotorMode>(MotorMode.MODE_05HZ_25);
+  const [ledOnlyMode, setLedOnlyMode] = useState(false);
 
   // Scan options state
   const [scanDialogOpen, setScanDialogOpen] = useState(false);
@@ -54,6 +55,11 @@ function App() {
 
   // PWA settings state
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+
+  // Section collapsed states (expanded by default)
+  const [motorExpanded, setMotorExpanded] = useState(true);
+  const [ledExpanded, setLedExpanded] = useState(true);
+  const [statusExpanded, setStatusExpanded] = useState(true);
 
   // Apply settings
   const compactMode = settings.ui.compactMode;
@@ -336,9 +342,25 @@ function App() {
         )}
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: compactMode ? 1 : 2 }}>
-          <MotorControl connected={connected} onModeChange={setMotorMode} />
-          <LEDControl connected={connected} motorMode={motorMode} />
-          <StatusMonitor connected={connected} />
+          <MotorControl
+            connected={connected}
+            onModeChange={setMotorMode}
+            onLedOnlyModeChange={setLedOnlyMode}
+            expanded={motorExpanded}
+            onToggleExpanded={() => setMotorExpanded(!motorExpanded)}
+          />
+          <LEDControl
+            connected={connected}
+            motorMode={motorMode}
+            ledOnlyMode={ledOnlyMode}
+            expanded={ledExpanded}
+            onToggleExpanded={() => setLedExpanded(!ledExpanded)}
+          />
+          <StatusMonitor
+            connected={connected}
+            expanded={statusExpanded}
+            onToggleExpanded={() => setStatusExpanded(!statusExpanded)}
+          />
         </Box>
 
         {connected && (
