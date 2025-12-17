@@ -15,6 +15,7 @@ import Battery50Icon from '@mui/icons-material/Battery50';
 import Battery20Icon from '@mui/icons-material/Battery20';
 import TimerIcon from '@mui/icons-material/Timer';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import DevicesOtherIcon from '@mui/icons-material/DevicesOther';
 import { bleConfigService } from '../services/ble-config.service';
 import { useSessionTimer } from '../hooks/useSessionTimer';
 import { useBatteryLevel } from '../hooks/useBatteryLevel';
@@ -159,14 +160,23 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected, expande
 
   // Summary view for collapsed state
   const summaryView = (
-    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
-      <Chip
-        icon={<TimerIcon sx={{ fontSize: 16 }} />}
-        label={`${formatTime(sessionTimer.sessionTime)} / ${formatTime(sessionDuration)}`}
-        size="small"
-        color={sessionTimer.progress >= 100 ? 'success' : 'default'}
-        variant="outlined"
-      />
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center', width: '100%' }}>
+      {/* Session progress bar - prominent for therapist glance */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 120 }}>
+        <TimerIcon sx={{ fontSize: 18, color: sessionTimer.progress >= 100 ? 'success.main' : 'text.secondary' }} />
+        <Box sx={{ flex: 1, minWidth: 60 }}>
+          <LinearProgress
+            variant="determinate"
+            value={Math.min(sessionTimer.progress, 100)}
+            color={sessionTimer.progress >= 100 ? 'success' : 'primary'}
+            sx={{ height: 8, borderRadius: 1 }}
+          />
+        </Box>
+        <Typography variant="caption" sx={{ minWidth: 70, textAlign: 'right', color: 'text.secondary' }}>
+          {formatTime(sessionTimer.sessionTime)} / {formatTime(sessionDuration)}
+        </Typography>
+      </Box>
+      {/* Battery indicators */}
       <Chip
         icon={getBatteryIcon(battery.batteryLevel)}
         label={`${battery.batteryLevel}%`}
@@ -176,7 +186,8 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected, expande
       />
       {clientBattery.batteryLevel > 0 && (
         <Chip
-          label={`Client: ${clientBattery.batteryLevel}%`}
+          icon={<DevicesOtherIcon sx={{ fontSize: 16 }} />}
+          label={`${clientBattery.batteryLevel}%`}
           size="small"
           color={clientBattery.color}
           variant="outlined"

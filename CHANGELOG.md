@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Enhanced
+- **Session Progress in Collapsed View**: Status & Monitoring summary now shows a visual progress bar
+  - Timer icon + progress bar + time display for quick therapist glance
+  - Client battery now uses device icon instead of "Client:" text for cleaner UI
+
 ## [2.7.0] - 2025-12-17
 
 ### Added
