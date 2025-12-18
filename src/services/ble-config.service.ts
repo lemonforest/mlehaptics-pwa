@@ -40,6 +40,10 @@ export const CHARACTERISTICS = {
   LOCAL_FIRMWARE_VERSION: '4bcae9be-9829-4f0a-9e88-267de5e70212',
   PEER_FIRMWARE_VERSION: '4bcae9be-9829-4f0a-9e88-267de5e70213',
 
+  // HARDWARE INFO GROUP (AD048)
+  LOCAL_HARDWARE_INFO: '4bcae9be-9829-4f0a-9e88-267de5e70215',   // Read-only: e.g., "ESP32-C6 v0.2 FTM:full"
+  PEER_HARDWARE_INFO: '4bcae9be-9829-4f0a-9e88-267de5e70216',    // Read-only: peer hardware info (empty if no peer)
+
   // PATTERN PLAYBACK GROUP (Mode 5 - experimental)
   PATTERN_CONTROL: '4bcae9be-9829-4f0a-9e88-267de5e70217',  // Write-only: 0=stop, 1=start, 2+=builtin pattern
   PATTERN_DATA: '4bcae9be-9829-4f0a-9e88-267de5e70218',     // Write-only: chunked transfer (future)
@@ -134,6 +138,10 @@ export interface DeviceConfig {
   // Firmware Version (read-only)
   localFirmwareVersion: string; // e.g., "vMAJOR.MINOR.PATCH (MMM DD YYYY HH:MM:SS)"
   peerFirmwareVersion: string; // Same format, empty if no peer connected
+
+  // Hardware Info (read-only, AD048)
+  localHardwareInfo: string; // e.g., "ESP32-C6 v0.2 FTM:full"
+  peerHardwareInfo: string; // Same format, empty if no peer connected
 
   // Pattern Playback (Mode 5 only, read-only)
   patternStatus: PatternStatus; // 0=stopped, 1=playing, 2=error
@@ -583,6 +591,9 @@ export class BLEConfigService {
       // Firmware versions (graceful fallback if not supported by older firmware)
       localFirmwareVersion: await this.readFirmwareVersion('LOCAL_FIRMWARE_VERSION'),
       peerFirmwareVersion: await this.readFirmwareVersion('PEER_FIRMWARE_VERSION'),
+      // Hardware info (graceful fallback if not supported by older firmware)
+      localHardwareInfo: await this.readHardwareInfo('LOCAL_HARDWARE_INFO'),
+      peerHardwareInfo: await this.readHardwareInfo('PEER_HARDWARE_INFO'),
       // Pattern playback status (graceful fallback for older firmware)
       patternStatus: await this.readPatternStatus(),
     };
@@ -603,6 +614,18 @@ export class BLEConfigService {
       return await this.readString(charKey);
     } catch (error) {
       console.warn(`Firmware version characteristic ${charKey} not available:`, error);
+      return '';
+    }
+  }
+
+  /**
+   * Read hardware info string with graceful fallback for older firmware
+   */
+  private async readHardwareInfo(charKey: string): Promise<string> {
+    try {
+      return await this.readString(charKey);
+    } catch (error) {
+      console.warn(`Hardware info characteristic ${charKey} not available:`, error);
       return '';
     }
   }
@@ -691,6 +714,22 @@ export class BLEConfigService {
    */
   async readPeerFirmwareVersion(): Promise<string> {
     return await this.readFirmwareVersion('PEER_FIRMWARE_VERSION');
+  }
+
+  /**
+   * Read local device hardware info (AD048)
+   * @returns Hardware info string (e.g., "ESP32-C6 v0.2 FTM:full")
+   */
+  async readLocalHardwareInfo(): Promise<string> {
+    return await this.readHardwareInfo('LOCAL_HARDWARE_INFO');
+  }
+
+  /**
+   * Read peer device hardware info (for dual-device mode, AD048)
+   * @returns Hardware info string or empty if no peer connected
+   */
+  async readPeerHardwareInfo(): Promise<string> {
+    return await this.readHardwareInfo('PEER_HARDWARE_INFO');
   }
 
   /**
