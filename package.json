@@ -1,6 +1,6 @@
 {
   "name": "mlehaptics-pwa",
-  "version": "2.7.2",
+  "version": "2.8.0",
   "description": "Progressive Web App for MLEHaptics BLE Configuration Service",
   "type": "module",
   "scripts": {

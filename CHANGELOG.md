@@ -7,10 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.8.0] - 2025-12-18
+
+### Added
+- **Pattern Playback Mode (Mode 5)**: Experimental demo mode for research and lightbar effects
+  - New `PatternControl` component with Play/Stop buttons and pattern selector
+  - Real-time playback status indicator (Stopped/Playing/Error) with pulse animation
+  - Currently supports "Alternating" builtin pattern
+  - Hidden by default - requires "Show Advanced Controls" setting to access
+  - Per AD032: device button cycling skips Mode 5 to prevent accidental activation during therapy
+
 ### Enhanced
 - **Session Progress in Collapsed View**: Status & Monitoring summary now shows a visual progress bar
   - Timer icon + progress bar + time display for quick therapist glance
   - Client battery now uses device icon instead of "Client:" text for cleaner UI
+
+### Technical
+- Added 3 new BLE characteristics for pattern playback (0x0217-0x0219):
+  - `PATTERN_CONTROL` (Write): Commands for stop/start/pattern selection
+  - `PATTERN_DATA` (Write): Reserved for future custom pattern uploads
+  - `PATTERN_STATUS` (Read/Notify): Real-time playback state
+- Added `PatternStatus` and `PatternCommand` enums
+- Added `BUILTIN_PATTERNS` array for UI pattern selector
+- Added pattern control methods: `stopPattern()`, `startPattern()`, `loadAndStartBuiltinPattern()`
+- Motor intensity slider hidden in Pattern mode (intensity controlled by pattern data)
 
 ## [2.7.0] - 2025-12-17
 
@@ -364,7 +384,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - BLE Configuration Service UUID: `6E400002-B5A3-F393-E0A9-E50E24DCCA9E`
 - 12 BLE characteristics for motor, LED, and session control
 
-[unreleased]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.6.0...HEAD
+[unreleased]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.8.0...HEAD
+[2.8.0]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.7.0...v2.8.0
+[2.7.0]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.4.1...v2.5.0
 [2.4.1]: https://github.com/lemonforest/mlehaptics-pwa/compare/v2.4.0...v2.4.1
