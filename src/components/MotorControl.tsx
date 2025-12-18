@@ -14,10 +14,11 @@ import {
   Switch,
   Chip,
 } from '@mui/material';
-import { MotorMode, MOTOR_MODE_LABELS, bleConfigService } from '../services/ble-config.service';
+import { MotorMode, MOTOR_MODE_LABELS, bleConfigService, PatternStatus } from '../services/ble-config.service';
 import { useDebouncedBLESend } from '../hooks/useDebouncedBLESend';
 import { usePWASettings } from '../contexts/PWASettingsContext';
 import { CollapsibleCard } from './CollapsibleCard';
+import { PatternControl } from './PatternControl';
 
 interface MotorControlProps {
   connected: boolean;
@@ -34,7 +35,18 @@ const MODE_INTENSITY_RANGES: Record<MotorMode, { min: number; max: number }> = {
   [MotorMode.MODE_15HZ_25]: { min: 70, max: 90 },
   [MotorMode.MODE_2HZ_25]: { min: 70, max: 90 },
   [MotorMode.MODE_CUSTOM]: { min: 30, max: 80 },
+  [MotorMode.MODE_PATTERN]: { min: 0, max: 100 }, // Pattern mode - intensity controlled by pattern data
 };
+
+// Therapy modes (shown by default) vs experimental modes (require advanced features)
+const THERAPY_MODES = [
+  MotorMode.MODE_05HZ_25,
+  MotorMode.MODE_1HZ_25,
+  MotorMode.MODE_15HZ_25,
+  MotorMode.MODE_2HZ_25,
+  MotorMode.MODE_CUSTOM,
+];
+const EXPERIMENTAL_MODES = [MotorMode.MODE_PATTERN];
 
 // Generic logarithmic scale helpers for percentage-based sliders
 const createLogScaleHelpers = (minVal: number, maxVal: number) => {
@@ -74,7 +86,10 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
     [MotorMode.MODE_15HZ_25]: 80,
     [MotorMode.MODE_2HZ_25]: 80,
     [MotorMode.MODE_CUSTOM]: 55,
+    [MotorMode.MODE_PATTERN]: 0, // Pattern mode - not directly configurable
   });
+  // Pattern playback status (Mode 5 only)
+  const [patternStatus, setPatternStatus] = useState<PatternStatus>(PatternStatus.STOPPED);
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
 
   // LED-only mode state (Mode 4 only: 0% intensity = motors off, LED only)
@@ -136,6 +151,12 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
         onModeChange?.(newMode);
       });
 
+      // Subscribe to pattern status notifications (Mode 5)
+      const unsubscribePatternStatus = bleConfigService.onPatternStatusChange((status: PatternStatus) => {
+        console.log('Pattern status changed:', status);
+        setPatternStatus(status);
+      });
+
       // Subscribe to config changes (e.g., when presets are loaded)
       const unsubscribeConfig = bleConfigService.onConfigChange((config) => {
         console.log('Config changed, updating motor control:', config);
@@ -159,13 +180,17 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
           [MotorMode.MODE_2HZ_25]: config.mode3Intensity,
           // For Mode 4, if LED-only (0%), show saved intensity in UI
           [MotorMode.MODE_CUSTOM]: isLedOnly ? savedMode4Intensity : config.mode4Intensity,
+          [MotorMode.MODE_PATTERN]: 0, // Pattern mode - controlled by pattern data
         });
+        // Update pattern status from config
+        setPatternStatus(config.patternStatus);
         onModeChange?.(config.mode);
       });
 
       // Cleanup subscriptions on disconnect
       return () => {
         unsubscribeMode();
+        unsubscribePatternStatus();
         unsubscribeConfig();
       };
     }
@@ -209,7 +234,10 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
         [MotorMode.MODE_2HZ_25]: config.mode3Intensity,
         // For Mode 4, if LED-only (0%), show saved intensity in UI
         [MotorMode.MODE_CUSTOM]: isLedOnly ? 55 : config.mode4Intensity,
+        [MotorMode.MODE_PATTERN]: 0, // Pattern mode - controlled by pattern data
       });
+      // Update pattern status from config
+      setPatternStatus(config.patternStatus);
       onModeChange?.(config.mode);
     } catch (error) {
       console.error('Failed to load motor config:', error);
@@ -333,19 +361,46 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
     ];
   }, [currentIntensityRange, intensityLogScale]);
 
+  // Check if advanced controls are enabled (for Pattern mode visibility)
+  const showAdvancedControls = settings.ui.showAdvancedControls;
+
+  // Filter available modes based on settings
+  const availableModes = useMemo(() => {
+    const modes = [...THERAPY_MODES];
+    if (showAdvancedControls) {
+      modes.push(...EXPERIMENTAL_MODES);
+    }
+    return modes;
+  }, [showAdvancedControls]);
+
+  // Pattern status label for summary
+  const patternStatusLabel = patternStatus === PatternStatus.PLAYING ? 'Playing' :
+                             patternStatus === PatternStatus.ERROR ? 'Error' : 'Stopped';
+
   // Summary view for collapsed state
   const summaryView = (
     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
       <Chip label={MOTOR_MODE_LABELS[mode]} size="small" color="primary" variant="outlined" />
-      <Chip
-        label={ledOnlyMode && mode === MotorMode.MODE_CUSTOM ? 'LED Only' : `${currentIntensity}%`}
-        size="small"
-        color={ledOnlyMode && mode === MotorMode.MODE_CUSTOM ? 'secondary' : 'default'}
-      />
-      {mode === MotorMode.MODE_CUSTOM && (
+      {mode === MotorMode.MODE_PATTERN ? (
+        <Chip
+          label={patternStatusLabel}
+          size="small"
+          color={patternStatus === PatternStatus.PLAYING ? 'success' :
+                 patternStatus === PatternStatus.ERROR ? 'error' : 'default'}
+        />
+      ) : (
         <>
-          <Chip label={`${(customFrequency / 100).toFixed(2)} Hz`} size="small" variant="outlined" />
-          <Chip label={`${customDutyCycle}% duty`} size="small" variant="outlined" />
+          <Chip
+            label={ledOnlyMode && mode === MotorMode.MODE_CUSTOM ? 'LED Only' : `${currentIntensity}%`}
+            size="small"
+            color={ledOnlyMode && mode === MotorMode.MODE_CUSTOM ? 'secondary' : 'default'}
+          />
+          {mode === MotorMode.MODE_CUSTOM && (
+            <>
+              <Chip label={`${(customFrequency / 100).toFixed(2)} Hz`} size="small" variant="outlined" />
+              <Chip label={`${customDutyCycle}% duty`} size="small" variant="outlined" />
+            </>
+          )}
         </>
       )}
     </Box>
@@ -368,14 +423,21 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
                 label="Mode"
                 onChange={(e) => handleModeChange(e.target.value as MotorMode)}
               >
-                {Object.entries(MOTOR_MODE_LABELS).map(([value, label]) => (
-                  <MenuItem key={value} value={Number(value)}>
-                    {label}
+                {availableModes.map((modeValue) => (
+                  <MenuItem key={modeValue} value={modeValue}>
+                    {MOTOR_MODE_LABELS[modeValue]}
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
           </Grid>
+
+          {/* Pattern Playback Controls (Mode 5) */}
+          {mode === MotorMode.MODE_PATTERN && (
+            <Grid item xs={12}>
+              <PatternControl connected={connected} />
+            </Grid>
+          )}
 
           {mode === MotorMode.MODE_CUSTOM && (
             <>
@@ -436,50 +498,53 @@ export const MotorControl: React.FC<MotorControlProps> = ({ connected, onModeCha
             </>
           )}
 
-          <Grid item xs={12}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Typography>
-                Intensity: {ledOnlyMode && mode === MotorMode.MODE_CUSTOM ? '0%' : `${currentIntensity}%`}
-              </Typography>
-              {mode === MotorMode.MODE_CUSTOM && (
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={ledOnlyMode}
-                      onChange={(e) => handleLedOnlyToggle(e.target.checked)}
-                      disabled={!connected}
-                      size="small"
-                    />
-                  }
-                  label="LED Only"
-                  labelPlacement="start"
-                  sx={{ mr: 0 }}
+          {/* Intensity slider - hidden in Pattern mode (intensity controlled by pattern data) */}
+          {mode !== MotorMode.MODE_PATTERN && (
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography>
+                  Intensity: {ledOnlyMode && mode === MotorMode.MODE_CUSTOM ? '0%' : `${currentIntensity}%`}
+                </Typography>
+                {mode === MotorMode.MODE_CUSTOM && (
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={ledOnlyMode}
+                        onChange={(e) => handleLedOnlyToggle(e.target.checked)}
+                        disabled={!connected}
+                        size="small"
+                      />
+                    }
+                    label="LED Only"
+                    labelPlacement="start"
+                    sx={{ mr: 0 }}
+                  />
+                )}
+              </Box>
+              <Box sx={{ px: compactMode ? 1 : 2, py: compactMode ? 2 : 3 }}>
+                <Slider
+                  value={intensityLogScale.valueToSlider(currentIntensity)}
+                  onChange={handleIntensityChange}
+                  onChangeCommitted={handleIntensityCommitted}
+                  onMouseDown={intensityDebounce.onInteractionStart}
+                  onTouchStart={intensityDebounce.onInteractionStart}
+                  min={0}
+                  max={100}
+                  step={0.1}
+                  marks={intensityMarks}
+                  disabled={!connected || (mode === MotorMode.MODE_CUSTOM && ledOnlyMode)}
+                  valueLabelDisplay="auto"
+                  valueLabelFormat={(value) => `${intensityLogScale.sliderToValue(value)}%`}
+                  sx={{ touchAction: 'none' }}
                 />
-              )}
-            </Box>
-            <Box sx={{ px: compactMode ? 1 : 2, py: compactMode ? 2 : 3 }}>
-              <Slider
-                value={intensityLogScale.valueToSlider(currentIntensity)}
-                onChange={handleIntensityChange}
-                onChangeCommitted={handleIntensityCommitted}
-                onMouseDown={intensityDebounce.onInteractionStart}
-                onTouchStart={intensityDebounce.onInteractionStart}
-                min={0}
-                max={100}
-                step={0.1}
-                marks={intensityMarks}
-                disabled={!connected || (mode === MotorMode.MODE_CUSTOM && ledOnlyMode)}
-                valueLabelDisplay="auto"
-                valueLabelFormat={(value) => `${intensityLogScale.sliderToValue(value)}%`}
-                sx={{ touchAction: 'none' }}
-              />
-            </Box>
-            <Typography variant="caption" color="text.secondary">
-              {mode === MotorMode.MODE_CUSTOM && ledOnlyMode
-                ? 'Motors disabled - LED visual feedback only'
-                : `Motor power for ${MOTOR_MODE_LABELS[mode]} mode (${currentIntensityRange.min}-${currentIntensityRange.max}%)`}
-            </Typography>
-          </Grid>
+              </Box>
+              <Typography variant="caption" color="text.secondary">
+                {mode === MotorMode.MODE_CUSTOM && ledOnlyMode
+                  ? 'Motors disabled - LED visual feedback only'
+                  : `Motor power for ${MOTOR_MODE_LABELS[mode]} mode (${currentIntensityRange.min}-${currentIntensityRange.max}%)`}
+              </Typography>
+            </Grid>
+          )}
         </Grid>
       <Snackbar
         open={snackbar.open}

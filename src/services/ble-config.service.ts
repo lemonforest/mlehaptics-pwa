@@ -39,6 +39,11 @@ export const CHARACTERISTICS = {
   // FIRMWARE VERSION GROUP
   LOCAL_FIRMWARE_VERSION: '4bcae9be-9829-4f0a-9e88-267de5e70212',
   PEER_FIRMWARE_VERSION: '4bcae9be-9829-4f0a-9e88-267de5e70213',
+
+  // PATTERN PLAYBACK GROUP (Mode 5 - experimental)
+  PATTERN_CONTROL: '4bcae9be-9829-4f0a-9e88-267de5e70217',  // Write-only: 0=stop, 1=start, 2+=builtin pattern
+  PATTERN_DATA: '4bcae9be-9829-4f0a-9e88-267de5e70218',     // Write-only: chunked transfer (future)
+  PATTERN_STATUS: '4bcae9be-9829-4f0a-9e88-267de5e70219',   // Read/Notify: 0=stopped, 1=playing, 2=error
 } as const;
 
 // Motor modes (AD032 - Updated specification)
@@ -48,15 +53,38 @@ export enum MotorMode {
   MODE_15HZ_25 = 2,
   MODE_2HZ_25 = 3,
   MODE_CUSTOM = 4,
+  MODE_PATTERN = 5,  // Experimental pattern playback mode
 }
 
-export const MOTOR_MODE_LABELS = {
+export const MOTOR_MODE_LABELS: Record<MotorMode, string> = {
   [MotorMode.MODE_05HZ_25]: '0.5 Hz @ 25%',
   [MotorMode.MODE_1HZ_25]: '1.0 Hz @ 25%',
   [MotorMode.MODE_15HZ_25]: '1.5 Hz @ 25%',
   [MotorMode.MODE_2HZ_25]: '2.0 Hz @ 25%',
   [MotorMode.MODE_CUSTOM]: 'Custom',
+  [MotorMode.MODE_PATTERN]: 'Pattern (Demo)',
 };
+
+// Pattern playback status values (AD032)
+export enum PatternStatus {
+  STOPPED = 0,
+  PLAYING = 1,
+  ERROR = 2,
+}
+
+// Pattern control commands (AD032)
+export enum PatternCommand {
+  STOP = 0,
+  START = 1,
+  BUILTIN_ALTERNATING = 2,  // Load and start builtin alternating pattern
+  // 3+ reserved for future builtin patterns
+}
+
+// Builtin pattern definitions for UI
+export const BUILTIN_PATTERNS = [
+  { id: 2, name: 'Alternating', description: 'Basic left-right alternation' },
+  // Future patterns will be added here as firmware implements them
+] as const;
 
 // LED Color Palette (16 colors from firmware - AD033 standard)
 export const COLOR_PALETTE = [
@@ -106,6 +134,9 @@ export interface DeviceConfig {
   // Firmware Version (read-only)
   localFirmwareVersion: string; // e.g., "vMAJOR.MINOR.PATCH (MMM DD YYYY HH:MM:SS)"
   peerFirmwareVersion: string; // Same format, empty if no peer connected
+
+  // Pattern Playback (Mode 5 only, read-only)
+  patternStatus: PatternStatus; // 0=stopped, 1=playing, 2=error
 }
 
 export interface ScanOptions {
@@ -319,8 +350,8 @@ export class BLEConfigService {
   }
 
   private async setupNotifications(): Promise<void> {
-    // Setup notifications for status characteristics and MODE (if supported by firmware)
-    const notifyChars = ['SESSION_TIME', 'BATTERY_LEVEL', 'CLIENT_BATTERY', 'MODE'];
+    // Setup notifications for status characteristics, MODE, and PATTERN_STATUS (if supported by firmware)
+    const notifyChars = ['SESSION_TIME', 'BATTERY_LEVEL', 'CLIENT_BATTERY', 'MODE', 'PATTERN_STATUS'];
 
     for (const charKey of notifyChars) {
       const char = this.characteristics.get(charKey);
@@ -392,6 +423,7 @@ export class BLEConfigService {
       case 'LED_COLOR_MODE':
       case 'LED_PALETTE_INDEX':
       case 'LED_BRIGHTNESS':
+      case 'PATTERN_STATUS':
         value = char.value.getUint8(0);
         break;
       case 'CUSTOM_FREQUENCY':
@@ -551,6 +583,8 @@ export class BLEConfigService {
       // Firmware versions (graceful fallback if not supported by older firmware)
       localFirmwareVersion: await this.readFirmwareVersion('LOCAL_FIRMWARE_VERSION'),
       peerFirmwareVersion: await this.readFirmwareVersion('PEER_FIRMWARE_VERSION'),
+      // Pattern playback status (graceful fallback for older firmware)
+      patternStatus: await this.readPatternStatus(),
     };
     // Update cache
     this.cachedConfig = config;
@@ -665,6 +699,71 @@ export class BLEConfigService {
    */
   isAutoNotificationsEnabled(): boolean {
     return this.autoNotificationsEnabled;
+  }
+
+  // ==================== PATTERN PLAYBACK METHODS (Mode 5) ====================
+
+  /**
+   * Read pattern status with graceful fallback for older firmware
+   * @returns PatternStatus value (0=stopped, 1=playing, 2=error)
+   */
+  private async readPatternStatus(): Promise<PatternStatus> {
+    try {
+      return await this.readUint8('PATTERN_STATUS') as PatternStatus;
+    } catch (error) {
+      console.warn('Pattern status characteristic not available:', error);
+      return PatternStatus.STOPPED;
+    }
+  }
+
+  /**
+   * Send a pattern control command
+   * @param command PatternCommand value (0=stop, 1=start, 2+=builtin pattern)
+   */
+  async sendPatternCommand(command: PatternCommand): Promise<void> {
+    await this.writeUint8('PATTERN_CONTROL', command);
+  }
+
+  /**
+   * Stop pattern playback
+   */
+  async stopPattern(): Promise<void> {
+    await this.sendPatternCommand(PatternCommand.STOP);
+  }
+
+  /**
+   * Start/resume pattern playback (requires pattern to be loaded first)
+   */
+  async startPattern(): Promise<void> {
+    await this.sendPatternCommand(PatternCommand.START);
+  }
+
+  /**
+   * Load and start a builtin pattern
+   * @param patternId Pattern command ID (2 for alternating, 3+ reserved for future patterns)
+   */
+  async loadAndStartBuiltinPattern(patternId: number): Promise<void> {
+    if (patternId < 2) {
+      throw new Error('Invalid builtin pattern ID. Use 2 or higher.');
+    }
+    await this.sendPatternCommand(patternId);
+  }
+
+  /**
+   * Read current pattern playback status
+   * @returns PatternStatus value (0=stopped, 1=playing, 2=error)
+   */
+  async getPatternStatus(): Promise<PatternStatus> {
+    return await this.readPatternStatus();
+  }
+
+  /**
+   * Subscribe to pattern status changes via notifications
+   * @param callback Function to call when pattern status changes
+   * @returns Unsubscribe function
+   */
+  onPatternStatusChange(callback: (status: PatternStatus) => void): () => void {
+    return this.subscribe('PATTERN_STATUS', callback);
   }
 }
 
