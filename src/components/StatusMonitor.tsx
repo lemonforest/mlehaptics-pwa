@@ -36,6 +36,8 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected, expande
   const [snackbar, setSnackbar] = useState({ open: false, message: '' });
   const [localFirmwareVersion, setLocalFirmwareVersion] = useState('');
   const [peerFirmwareVersion, setPeerFirmwareVersion] = useState('');
+  const [localHardwareInfo, setLocalHardwareInfo] = useState('');
+  const [peerHardwareInfo, setPeerHardwareInfo] = useState('');
 
   // Initialize with default values
   const [initialSessionTime, setInitialSessionTime] = useState(0);
@@ -109,6 +111,8 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected, expande
       setInitialClientBatteryLevel(config.clientBatteryLevel);
       setLocalFirmwareVersion(config.localFirmwareVersion || '');
       setPeerFirmwareVersion(config.peerFirmwareVersion || '');
+      setLocalHardwareInfo(config.localHardwareInfo || '');
+      setPeerHardwareInfo(config.peerHardwareInfo || '');
 
       // Set initial values in hooks
       sessionTimer.setTime(config.sessionTime);
@@ -313,12 +317,22 @@ export const StatusMonitor: React.FC<StatusMonitorProps> = ({ connected, expande
 
           {connected && (
             <Grid item xs={12}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <InfoOutlinedIcon color="action" fontSize="small" />
-                <Typography variant="body2" color="text.secondary">
-                  Firmware: {localFirmwareVersion || 'Not available'}
-                  {clientBattery.batteryLevel > 0 && ` / Client: ${peerFirmwareVersion || 'Not available'}`}
-                </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <InfoOutlinedIcon color="action" fontSize="small" />
+                  <Typography variant="body2" color="text.secondary">
+                    Firmware: {localFirmwareVersion || 'Not available'}
+                    {clientBattery.batteryLevel > 0 && peerFirmwareVersion && ` / Client: ${peerFirmwareVersion}`}
+                  </Typography>
+                </Box>
+                {localHardwareInfo && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 3 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Hardware: {localHardwareInfo}
+                      {clientBattery.batteryLevel > 0 && peerHardwareInfo && ` / Client: ${peerHardwareInfo}`}
+                    </Typography>
+                  </Box>
+                )}
               </Box>
             </Grid>
           )}
