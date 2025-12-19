@@ -48,6 +48,7 @@ export const CHARACTERISTICS = {
   PATTERN_CONTROL: '4bcae9be-9829-4f0a-9e88-267de5e70217',  // Write-only: 0=stop, 1=start, 2+=builtin pattern
   PATTERN_DATA: '4bcae9be-9829-4f0a-9e88-267de5e70218',     // Write-only: chunked transfer (future)
   PATTERN_STATUS: '4bcae9be-9829-4f0a-9e88-267de5e70219',   // Read/Notify: 0=stopped, 1=playing, 2=error
+  PATTERN_LIST: '4bcae9be-9829-4f0a-9e88-267de5e7021a',     // Read-only: JSON array of available patterns
 } as const;
 
 // Motor modes (AD032 - Updated specification)
@@ -84,11 +85,17 @@ export enum PatternCommand {
   // 3+ reserved for future builtin patterns
 }
 
-// Builtin pattern definitions for UI
-export const BUILTIN_PATTERNS = [
-  { id: 2, name: 'Alternating', description: 'Basic left-right alternation' },
-  // Future patterns will be added here as firmware implements them
-] as const;
+// Pattern definition from firmware (returned as JSON from PATTERN_LIST characteristic)
+export interface PatternDefinition {
+  id: number;      // Command ID to write to PATTERN_CONTROL
+  name: string;    // Short display name
+  desc: string;    // User-facing description
+}
+
+// Fallback patterns for older firmware without PATTERN_LIST characteristic
+export const FALLBACK_PATTERNS: PatternDefinition[] = [
+  { id: 2, name: 'Alternating', desc: 'Basic left-right alternation' },
+];
 
 // LED Color Palette (16 colors from firmware - AD033 standard)
 export const COLOR_PALETTE = [
@@ -145,6 +152,7 @@ export interface DeviceConfig {
 
   // Pattern Playback (Mode 5 only, read-only)
   patternStatus: PatternStatus; // 0=stopped, 1=playing, 2=error
+  availablePatterns: PatternDefinition[]; // Patterns available on this firmware
 }
 
 export interface ScanOptions {
@@ -596,6 +604,8 @@ export class BLEConfigService {
       peerHardwareInfo: await this.readHardwareInfo('PEER_HARDWARE_INFO'),
       // Pattern playback status (graceful fallback for older firmware)
       patternStatus: await this.readPatternStatus(),
+      // Available patterns from firmware (graceful fallback to hardcoded list)
+      availablePatterns: await this.readPatternList(),
     };
     // Update cache
     this.cachedConfig = config;
@@ -752,6 +762,27 @@ export class BLEConfigService {
     } catch (error) {
       console.warn('Pattern status characteristic not available:', error);
       return PatternStatus.STOPPED;
+    }
+  }
+
+  /**
+   * Read available patterns from firmware as JSON
+   * Returns fallback patterns if characteristic not available
+   * @returns Array of PatternDefinition objects
+   */
+  private async readPatternList(): Promise<PatternDefinition[]> {
+    try {
+      const jsonString = await this.readString('PATTERN_LIST');
+      if (!jsonString) {
+        console.warn('Pattern list is empty, using fallback patterns');
+        return FALLBACK_PATTERNS;
+      }
+      const patterns = JSON.parse(jsonString) as PatternDefinition[];
+      console.log('Loaded patterns from firmware:', patterns);
+      return patterns;
+    } catch (error) {
+      console.warn('Pattern list characteristic not available, using fallback:', error);
+      return FALLBACK_PATTERNS;
     }
   }
 

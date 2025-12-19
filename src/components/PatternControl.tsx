@@ -28,7 +28,8 @@ import ErrorIcon from '@mui/icons-material/Error';
 import {
   bleConfigService,
   PatternStatus,
-  BUILTIN_PATTERNS,
+  PatternDefinition,
+  FALLBACK_PATTERNS,
 } from '../services/ble-config.service';
 import { usePWASettings } from '../contexts/PWASettingsContext';
 
@@ -49,15 +50,16 @@ export const PatternControl: React.FC<PatternControlProps> = ({ connected }) => 
 
   // State
   const [patternStatus, setPatternStatus] = useState<PatternStatus>(PatternStatus.STOPPED);
-  const [selectedPattern, setSelectedPattern] = useState<number>(BUILTIN_PATTERNS[0]?.id ?? 2);
+  const [availablePatterns, setAvailablePatterns] = useState<PatternDefinition[]>(FALLBACK_PATTERNS);
+  const [selectedPattern, setSelectedPattern] = useState<number>(FALLBACK_PATTERNS[0]?.id ?? 2);
   const [isLoading, setIsLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'error' as 'error' | 'success' });
 
-  // Subscribe to pattern status notifications
+  // Load patterns and status on connect
   useEffect(() => {
     if (connected) {
-      // Read initial status
-      loadPatternStatus();
+      // Load patterns from device config
+      loadPatternsFromConfig();
 
       // Subscribe to status changes
       const unsubscribe = bleConfigService.onPatternStatusChange((status: PatternStatus) => {
@@ -71,13 +73,22 @@ export const PatternControl: React.FC<PatternControlProps> = ({ connected }) => 
     }
   }, [connected]);
 
-  const loadPatternStatus = async () => {
+  const loadPatternsFromConfig = async () => {
     try {
-      const status = await bleConfigService.getPatternStatus();
-      setPatternStatus(status);
+      // Get cached config (already read during connection) or read fresh
+      const config = bleConfigService.getCachedConfig();
+      if (config) {
+        setPatternStatus(config.patternStatus);
+        if (config.availablePatterns && config.availablePatterns.length > 0) {
+          setAvailablePatterns(config.availablePatterns);
+          // Update selected pattern if current selection isn't in the new list
+          if (!config.availablePatterns.find(p => p.id === selectedPattern)) {
+            setSelectedPattern(config.availablePatterns[0].id);
+          }
+        }
+      }
     } catch (error) {
-      console.warn('Failed to read pattern status:', error);
-      // Pattern playback may not be supported by this firmware
+      console.warn('Failed to load pattern config:', error);
     }
   };
 
@@ -160,16 +171,16 @@ export const PatternControl: React.FC<PatternControlProps> = ({ connected }) => 
               label="Pattern"
               onChange={(e) => setSelectedPattern(e.target.value as number)}
             >
-              {BUILTIN_PATTERNS.map((pattern) => (
+              {availablePatterns.map((pattern) => (
                 <MenuItem key={pattern.id} value={pattern.id}>
                   {pattern.name}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
-          {BUILTIN_PATTERNS.find(p => p.id === selectedPattern)?.description && (
+          {availablePatterns.find(p => p.id === selectedPattern)?.desc && (
             <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-              {BUILTIN_PATTERNS.find(p => p.id === selectedPattern)?.description}
+              {availablePatterns.find(p => p.id === selectedPattern)?.desc}
             </Typography>
           )}
         </Grid>
